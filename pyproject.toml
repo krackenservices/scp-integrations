@@ -1,0 +1,17 @@
+[project]
+name = "scp-integrations-workspace"
+version = "0.1.0"
+description = "SCP Integrations Monorepo Workspace"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pytest",
+    "scp-constructor",
+]
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+scp-constructor = { workspace = true }
+
