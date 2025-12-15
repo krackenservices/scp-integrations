@@ -1,7 +1,6 @@
 """Tests for the local scanner module."""
 
 import pytest
-from pathlib import Path
 
 from scp_constructor.scanner.local import scan_directory, scan_directories
 

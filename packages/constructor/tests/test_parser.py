@@ -4,7 +4,6 @@ import pytest
 from pathlib import Path
 
 from scp_constructor.parser import load_scp, load_scp_from_content, SCPParseError
-from scp_constructor.models import SCPManifest
 
 
 # Path to example SCP files

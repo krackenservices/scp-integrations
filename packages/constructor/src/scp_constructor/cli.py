@@ -1,15 +1,12 @@
 """CLI for SCP Constructor."""
 
 import json
-import os
 from pathlib import Path
 from typing import Optional
 
 import typer
 from rich.console import Console
-from rich.table import Table
 from rich.panel import Panel
-from rich.syntax import Syntax
 
 from . import __version__
 from .parser import load_scp, SCPParseError
@@ -230,7 +227,7 @@ def validate(
             console.print(f"✗ [red]{scp_file}[/]")
             console.print(f"  Error: {e}")
             for err in e.errors[:5]:  # Show first 5 errors
-                loc = ".".join(str(l) for l in err.get("loc", []))
+                loc = ".".join(str(part) for part in err.get("loc", []))
                 console.print(f"    - {loc}: {err.get('msg', 'Unknown error')}")
     
     if errors:

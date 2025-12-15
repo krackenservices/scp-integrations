@@ -1,6 +1,5 @@
 """Tests for the export module."""
 
-import json
 import pytest
 
 from scp_constructor.models import (

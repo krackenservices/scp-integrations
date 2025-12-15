@@ -1,6 +1,6 @@
 """Neo4j graph builder for SCP architecture data."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from neo4j import GraphDatabase
 

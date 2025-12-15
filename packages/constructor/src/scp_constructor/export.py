@@ -156,7 +156,7 @@ def export_mermaid(manifests: list[SCPManifest], direction: str = "LR") -> str:
     
     tier1_ids = [info["id"] for info in systems.values() if info["tier"] == 1]
     if tier1_ids:
-        lines.append(f"    classDef critical fill:#ff6b6b,stroke:#333,stroke-width:2px")
+        lines.append("    classDef critical fill:#ff6b6b,stroke:#333,stroke-width:2px")
         lines.append(f"    class {','.join(tier1_ids)} critical")
     
     return "\n".join(lines)
