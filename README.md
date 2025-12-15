@@ -13,7 +13,7 @@ Scan repositories for `scp.yaml` manifests, validate them, build dependency grap
 
 ```bash
 cd packages/constructor
-uv run scp scan ./repos --export mermaid
+uv run scp-cli scan ./repos --export mermaid
 ```
 
 ## Quick Start
@@ -24,7 +24,7 @@ cd packages/constructor && uv sync && cd ../..
 
 # Scan repositories for scp.yaml files
 cd packages/constructor
-uv run scp scan /path/to/repos --export json -o graph.json
+uv run scp-cli scan /path/to/repos --export json -o graph.json
 ```
 
 ## Architecture

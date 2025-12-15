@@ -13,24 +13,24 @@ uv sync
 ### Validate SCP Files
 
 ```bash
-uv run scp validate ./examples
+uv run scp-cli validate ./examples
 ```
 
 ### Scan Local Directory
 
 ```bash
 # Scan and export to Mermaid
-uv run scp scan ./path/to/repos --export mermaid
+uv run scp-cli scan ./path/to/repos --export mermaid
 
 # Scan and export to JSON
-uv run scp scan ./path/to/repos --export json -o graph.json
+uv run scp-cli scan ./path/to/repos --export json -o graph.json
 ```
 
 ### Scan GitHub Organization
 
 ```bash
 export GITHUB_TOKEN=ghp_xxx
-uv run scp scan-github myorg --export mermaid
+uv run scp-cli scan-github myorg --export mermaid
 ```
 
 ### Sync to Neo4j
@@ -40,7 +40,7 @@ export NEO4J_URI=bolt://localhost:7687
 export NEO4J_USER=neo4j
 export NEO4J_PASSWORD=password
 
-uv run scp scan ./repos
+uv run scp-cli scan ./repos
 ```
 
 ## Commands
