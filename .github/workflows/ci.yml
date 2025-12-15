@@ -48,6 +48,7 @@ jobs:
         run: uv python install 3.12
 
       - name: Install dependencies
+        working-directory: .
         run: uv sync --all-groups
 
       - name: Lint (Ruff)
