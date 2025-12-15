@@ -33,7 +33,8 @@ def scan(
     neo4j_user: Optional[str] = typer.Option(None, "--neo4j-user", envvar="NEO4J_USER", help="Neo4j username"),
     neo4j_password: Optional[str] = typer.Option(None, "--neo4j-password", envvar="NEO4J_PASSWORD", help="Neo4j password"),
     export_format: Optional[str] = typer.Option(None, "--export", "-e", help="Export format: json, mermaid"),
-    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output file (stdout if not specified)"),
+    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output file (default: scp.json or scp.mmd)"),
+    stdout: bool = typer.Option(False, "--stdout", help="Output to stdout instead of file"),
 ):
     """Scan a local directory for SCP files and build the architecture graph."""
     
@@ -101,15 +102,17 @@ def scan(
             console.print(f"[red]Unknown export format:[/] {export_format}")
             raise typer.Exit(1)
         
-        if output:
-            output.write_text(content)
-            console.print(f"\n[green]Exported to[/] {output}")
+        if stdout:
+            # Output to stdout
+            print(content)
         else:
-            console.print()
-            if export_format == "mermaid":
-                console.print(Syntax(content, "text", theme="monokai"))
+            # Write to file
+            if output:
+                out_file = output
             else:
-                console.print(Syntax(content, "json", theme="monokai"))
+                out_file = Path(f"scp.{'mmd' if export_format == 'mermaid' else 'json'}")
+            out_file.write_text(content)
+            console.print(f"\n[green]Exported to[/] {out_file}")
 
 
 @app.command("scan-github")
@@ -120,7 +123,8 @@ def scan_github(
     neo4j_user: Optional[str] = typer.Option(None, "--neo4j-user", envvar="NEO4J_USER", help="Neo4j username"),
     neo4j_password: Optional[str] = typer.Option(None, "--neo4j-password", envvar="NEO4J_PASSWORD", help="Neo4j password"),
     export_format: Optional[str] = typer.Option(None, "--export", "-e", help="Export format: json, mermaid"),
-    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output file"),
+    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output file (default: scp.json or scp.mmd)"),
+    stdout: bool = typer.Option(False, "--stdout", help="Output to stdout instead of file"),
 ):
     """Scan a GitHub organization for SCP files."""
     
@@ -180,15 +184,17 @@ def scan_github(
             console.print(f"[red]Unknown export format:[/] {export_format}")
             raise typer.Exit(1)
         
-        if output:
-            output.write_text(content)
-            console.print(f"\n[green]Exported to[/] {output}")
+        if stdout:
+            # Output to stdout
+            print(content)
         else:
-            console.print()
-            if export_format == "mermaid":
-                console.print(Syntax(content, "text", theme="monokai"))
+            # Write to file
+            if output:
+                out_file = output
             else:
-                console.print(Syntax(content, "json", theme="monokai"))
+                out_file = Path(f"scp.{'mmd' if export_format == 'mermaid' else 'json'}")
+            out_file.write_text(content)
+            console.print(f"\n[green]Exported to[/] {out_file}")
 
 
 @app.command()

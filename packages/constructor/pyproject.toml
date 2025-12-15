@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-scp = "scp_constructor.cli:app"
+scp-cli = "scp_constructor.cli:app"
 
 [build-system]
 requires = ["hatchling"]
