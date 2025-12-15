@@ -91,6 +91,7 @@ jobs:
     needs: constructor
     if: startsWith(github.ref, 'refs/tags/constructor-v')
     runs-on: ubuntu-latest
+    environment: pypi
     permissions:
       contents: write
       id-token: write
