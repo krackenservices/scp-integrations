@@ -3,7 +3,8 @@ name: CI/CD
 on:
   push:
     branches: ["main"]
-    tags: ["v*"]
+    tags:
+      - "constructor-v*"
   pull_request:
     branches: ["main"]
 
@@ -27,7 +28,7 @@ jobs:
   constructor:
     name: Constructor - Build & Test
     needs: changes
-    if: ${{ needs.changes.outputs.constructor == 'true' || startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ needs.changes.outputs.constructor == 'true' || startsWith(github.ref, 'refs/tags/constructor-v') }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -59,12 +60,12 @@ jobs:
 
       - name: Sync Project Version
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            VERSION=${GITHUB_REF_NAME#v}
+          if [[ "$GITHUB_REF" == refs/tags/constructor-v* ]]; then
+            VERSION=${GITHUB_REF_NAME#constructor-v}
             echo "Type: Tagged Release"
           else
-            LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-            VERSION="${LAST_TAG#v}-dev"
+            LAST_TAG=$(git tag -l 'constructor-v*' --sort=-v:refname | head -n1 || echo "constructor-v0.0.0")
+            VERSION="${LAST_TAG#constructor-v}-dev"
             echo "Type: Dev Build (Last tag: $LAST_TAG)"
           fi
 
@@ -76,7 +77,7 @@ jobs:
         run: uv build
 
       - name: Upload Build Artifact
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/constructor-v')
         uses: actions/upload-artifact@v4
         with:
           name: constructor-dist
@@ -87,7 +88,7 @@ jobs:
   publish-constructor:
     name: Constructor - Publish
     needs: constructor
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/constructor-v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -110,3 +111,4 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
+
