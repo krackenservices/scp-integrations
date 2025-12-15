@@ -74,14 +74,15 @@ jobs:
           uv version
 
       - name: Build package
-        run: uv build
+        working-directory: .
+        run: uv build --package scp-constructor
 
       - name: Upload Build Artifact
         if: startsWith(github.ref, 'refs/tags/constructor-v')
         uses: actions/upload-artifact@v4
         with:
           name: constructor-dist
-          path: packages/constructor/dist/*
+          path: dist/*
           retention-days: 1
 
   # Publish constructor to PyPI on tag
