@@ -12,20 +12,25 @@ Unified tooling for the **System Capability Protocol** (SCP). This monorepo cont
 Scan repositories for `scp.yaml` manifests, validate them, build dependency graphs, and export to various formats (JSON, Mermaid, Neo4j).
 
 ```bash
-cd packages/constructor
 uv run scp-cli scan ./repos --export mermaid
 ```
 
 ## Quick Start
 
 ```bash
-# Install dependencies for both packages
-cd packages/constructor && uv sync && cd ../..
+# Install all dependencies
+make setup
 
 # Scan repositories for scp.yaml files
-cd packages/constructor
+make scan DIR=/path/to/repos
+
+# Or use the CLI directly
 uv run scp-cli scan /path/to/repos --export json -o graph.json
 ```
+
+## Makefile Commands
+
+Run `make help` to see all available commands
 
 ## Architecture
 
@@ -70,3 +75,4 @@ uv run pytest
 ## License
 
 MIT
+
