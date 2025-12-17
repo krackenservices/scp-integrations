@@ -105,6 +105,18 @@ class FailureModeThresholds(BaseModel):
     critical_ms: int | None = None
 
 
+class SecurityExtension(BaseModel):
+    """OpenC2-inspired security capability metadata.
+    
+    Used to describe what actions a security tool supports,
+    enabling SOAR autodiscovery of security controls.
+    """
+
+    actuator_profile: str | None = None  # e.g., "edr", "siem", "slpf"
+    actions: list[str] = []              # e.g., "query", "contain", "deny"
+    targets: list[str] = []              # e.g., "device", "ipv4_net", "file"
+
+
 # ============================================================================
 # Top-Level Types
 # ============================================================================
@@ -138,12 +150,15 @@ class Ownership(BaseModel):
 
 class Capability(BaseModel):
     """A capability provided by the system."""
+    
+    model_config = {"populate_by_name": True}
 
     capability: str
     type: Literal["rest", "grpc", "graphql", "event", "data", "stream"]
     contract: Contract | None = None
     sla: SLA | None = None
     topics: list[str] | None = None  # For event types
+    x_security: SecurityExtension | None = Field(None, alias="x-security")
 
 
 class Dependency(BaseModel):
