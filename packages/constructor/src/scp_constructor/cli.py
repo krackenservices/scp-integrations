@@ -13,7 +13,7 @@ from .parser import load_scp, SCPParseError
 from .scanner.local import scan_directory
 from .scanner.github import scan_github_org
 from .graph import Neo4jGraph
-from .export import export_json, export_mermaid
+from .export import export_json, export_mermaid, export_openc2, import_json
 
 app = typer.Typer(
     name="scp",
@@ -95,8 +95,11 @@ def scan(
             content = json.dumps(data, indent=2)
         elif export_format == "mermaid":
             content = export_mermaid(manifest_list)
+        elif export_format == "openc2":
+            data = export_openc2(manifest_list)
+            content = json.dumps(data, indent=2)
         else:
-            console.print(f"[red]Unknown export format:[/] {export_format}")
+            console.print(f"[red]Unknown export format:[/] {export_format}. Use: json, mermaid, openc2")
             raise typer.Exit(1)
         
         if stdout:
@@ -177,8 +180,11 @@ def scan_github(
             content = json.dumps(data, indent=2)
         elif export_format == "mermaid":
             content = export_mermaid(manifest_list)
+        elif export_format == "openc2":
+            data = export_openc2(manifest_list)
+            content = json.dumps(data, indent=2)
         else:
-            console.print(f"[red]Unknown export format:[/] {export_format}")
+            console.print(f"[red]Unknown export format:[/] {export_format}. Use: json, mermaid, openc2")
             raise typer.Exit(1)
         
         if stdout:
@@ -235,6 +241,63 @@ def validate(
         raise typer.Exit(1)
     else:
         console.print(f"\n[green]All {len(files)} file(s) valid[/]")
+
+
+@app.command()
+def transform(
+    input_file: Path = typer.Argument(..., help="JSON file from 'scp-cli scan' output"),
+    export_format: str = typer.Option(..., "--export", "-e", help="Export format: mermaid, openc2"),
+    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output file"),
+    stdout: bool = typer.Option(False, "--stdout", help="Output to stdout instead of file"),
+):
+    """Transform a JSON graph to other formats.
+    
+    Use this when you have a previously exported JSON file and want to
+    convert it to Mermaid diagrams or OpenC2 actuator profiles.
+    """
+    if not input_file.exists():
+        console.print(f"[red]Error:[/] File not found: {input_file}")
+        raise typer.Exit(1)
+    
+    console.print(f"[bold blue]Loading[/] {input_file}")
+    
+    try:
+        data = json.loads(input_file.read_text())
+    except json.JSONDecodeError as e:
+        console.print(f"[red]JSON Error:[/] {e}")
+        raise typer.Exit(1)
+    
+    # Import manifests from JSON
+    manifests = import_json(data)
+    console.print(f"Loaded [green]{len(manifests)}[/] systems")
+    
+    # Transform to requested format
+    if export_format == "mermaid":
+        content = export_mermaid(manifests)
+        default_ext = "mmd"
+    elif export_format == "openc2":
+        result = export_openc2(manifests)
+        content = json.dumps(result, indent=2)
+        default_ext = "json"
+        console.print(f"Found [green]{result['count']}[/] security actuators")
+    elif export_format == "json":
+        # Re-export as JSON (useful for filtering)
+        result = export_json(manifests)
+        content = json.dumps(result, indent=2)
+        default_ext = "json"
+    else:
+        console.print(f"[red]Unknown export format:[/] {export_format}. Use: mermaid, openc2, json")
+        raise typer.Exit(1)
+    
+    if stdout:
+        print(content)
+    else:
+        if output:
+            out_file = output
+        else:
+            out_file = Path(f"scp-transformed.{default_ext}")
+        out_file.write_text(content)
+        console.print(f"[green]Exported to[/] {out_file}")
 
 
 @app.command()

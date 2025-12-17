@@ -8,8 +8,10 @@ from scp_constructor.models import (
     Classification,
     Capability,
     Dependency,
+    Ownership,
+    SecurityExtension,
 )
-from scp_constructor.export import export_json, export_mermaid
+from scp_constructor.export import export_json, export_mermaid, export_openc2, import_json
 
 
 @pytest.fixture
@@ -49,6 +51,40 @@ def sample_manifests():
     )
 
     return [order_service, user_service]
+
+
+@pytest.fixture
+def security_manifest():
+    """Create manifest with security extensions."""
+    return SCPManifest(
+        scp="0.1.0",
+        system=System(
+            urn="urn:scp:crowdstrike:falcon",
+            name="CrowdStrike Falcon",
+            classification=Classification(tier=1, domain="security"),
+        ),
+        ownership=Ownership(team="security-ops"),
+        provides=[
+            Capability(
+                capability="host-containment",
+                type="rest",
+                x_security=SecurityExtension(
+                    actuator_profile="edr",
+                    actions=["contain", "allow", "query"],
+                    targets=["hostname", "device_id"],
+                ),
+            ),
+            Capability(
+                capability="threat-intel",
+                type="rest",
+                x_security=SecurityExtension(
+                    actuator_profile="edr",
+                    actions=["query"],
+                    targets=["ioc", "hash"],
+                ),
+            ),
+        ],
+    )
 
 
 class TestExportJson:
@@ -91,6 +127,18 @@ class TestExportJson:
         assert result["meta"]["systems_count"] == 2
         assert result["meta"]["capabilities_count"] == 2
         assert result["meta"]["dependencies_count"] == 1
+
+    def test_export_includes_security_extension(self, security_manifest):
+        """Test security extension is included in capability nodes."""
+        result = export_json([security_manifest])
+
+        cap_nodes = [n for n in result["nodes"] if n["type"] == "Capability"]
+        assert len(cap_nodes) == 2
+
+        containment_node = next(n for n in cap_nodes if n["name"] == "host-containment")
+        assert "x_security" in containment_node
+        assert containment_node["x_security"]["actuator_profile"] == "edr"
+        assert "contain" in containment_node["x_security"]["actions"]
 
 
 class TestExportMermaid:
@@ -135,3 +183,125 @@ class TestExportMermaid:
         result = export_mermaid(sample_manifests)
 
         assert "classDef critical" in result
+
+
+class TestExportOpenc2:
+    """Tests for OpenC2 export."""
+
+    def test_export_structure(self, security_manifest):
+        """Test OpenC2 export has correct structure."""
+        result = export_openc2([security_manifest])
+
+        assert "openc2_version" in result
+        assert "actuators" in result
+        assert "count" in result
+
+    def test_export_actuator_count(self, security_manifest):
+        """Test correct number of actuators."""
+        result = export_openc2([security_manifest])
+
+        assert result["count"] == 2
+        assert len(result["actuators"]) == 2
+
+    def test_export_actuator_fields(self, security_manifest):
+        """Test actuator has all required fields."""
+        result = export_openc2([security_manifest])
+
+        actuator = result["actuators"][0]
+        assert "actuator_id" in actuator
+        assert "name" in actuator
+        assert "capability" in actuator
+        assert "profile" in actuator
+        assert "actions" in actuator
+        assert "targets" in actuator
+        assert "api" in actuator
+        assert "metadata" in actuator
+
+    def test_export_actuator_values(self, security_manifest):
+        """Test actuator has correct values."""
+        result = export_openc2([security_manifest])
+
+        containment = next(a for a in result["actuators"] if a["capability"] == "host-containment")
+        assert containment["actuator_id"] == "urn:scp:crowdstrike:falcon"
+        assert containment["name"] == "CrowdStrike Falcon"
+        assert containment["profile"] == "edr"
+        assert containment["actions"] == ["contain", "allow", "query"]
+        assert containment["targets"] == ["hostname", "device_id"]
+        assert containment["metadata"]["team"] == "security-ops"
+
+    def test_export_skips_non_security_capabilities(self, sample_manifests):
+        """Test capabilities without x-security are skipped."""
+        result = export_openc2(sample_manifests)
+
+        assert result["count"] == 0
+        assert result["actuators"] == []
+
+
+class TestImportJson:
+    """Tests for JSON import."""
+
+    def test_import_reconstructs_manifests(self, sample_manifests):
+        """Test import reconstructs manifest list.
+        
+        Note: import_json only reconstructs systems that were fully defined,
+        not stub nodes created from dependency references.
+        """
+        json_data = export_json(sample_manifests)
+        imported = import_json(json_data)
+
+        # Both systems are fully defined (not stubs) so both should be imported
+        assert len(imported) == 2
+
+    def test_import_preserves_system_info(self, sample_manifests):
+        """Test system info is preserved."""
+        json_data = export_json(sample_manifests)
+        imported = import_json(json_data)
+
+        urns = {m.system.urn for m in imported}
+        # Both should be present since both are real systems (not stubs)
+        assert "urn:scp:test:order-service" in urns
+        assert "urn:scp:test:user-service" in urns
+
+    def test_import_preserves_classification(self, sample_manifests):
+        """Test classification is preserved."""
+        json_data = export_json(sample_manifests)
+        imported = import_json(json_data)
+
+        order = next(m for m in imported if m.system.urn == "urn:scp:test:order-service")
+        assert order.system.classification.tier == 1
+        assert order.system.classification.domain == "ordering"
+
+    def test_import_preserves_security_extension(self, security_manifest):
+        """Test security extension survives round-trip."""
+        json_data = export_json([security_manifest])
+        imported = import_json(json_data)
+
+        assert len(imported) == 1
+        manifest = imported[0]
+
+        # Check security extension is preserved
+        containment = next(c for c in manifest.provides if c.capability == "host-containment")
+        assert containment.x_security is not None
+        assert containment.x_security.actuator_profile == "edr"
+        assert containment.x_security.actions == ["contain", "allow", "query"]
+
+    def test_roundtrip_openc2_export(self, security_manifest):
+        """Test JSON -> import -> OpenC2 export produces same result."""
+        # Direct export
+        direct_openc2 = export_openc2([security_manifest])
+
+        # Round-trip export
+        json_data = export_json([security_manifest])
+        imported = import_json(json_data)
+        roundtrip_openc2 = export_openc2(imported)
+
+        # Compare (ignoring contract which isn't stored in JSON)
+        assert direct_openc2["count"] == roundtrip_openc2["count"]
+        assert len(direct_openc2["actuators"]) == len(roundtrip_openc2["actuators"])
+
+        for direct, roundtrip in zip(direct_openc2["actuators"], roundtrip_openc2["actuators"]):
+            assert direct["actuator_id"] == roundtrip["actuator_id"]
+            assert direct["capability"] == roundtrip["capability"]
+            assert direct["actions"] == roundtrip["actions"]
+            assert direct["targets"] == roundtrip["targets"]
+

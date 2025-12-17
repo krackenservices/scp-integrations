@@ -1,6 +1,6 @@
 # SCP Constructor
 
-Build architecture graphs from `scp.yaml` files. Scan local directories or GitHub organizations, validate manifests, sync to Neo4j, and export to JSON or Mermaid diagrams.
+Build architecture graphs from `scp.yaml` files. Scan local directories or GitHub organizations, validate manifests, sync to Neo4j, and export to JSON, Mermaid, or OpenC2 actuator profiles.
 
 ## Installation
 
@@ -24,6 +24,18 @@ uv run scp-cli scan ./path/to/repos --export mermaid
 
 # Scan and export to JSON
 uv run scp-cli scan ./path/to/repos --export json -o graph.json
+
+# Scan and export OpenC2 actuator profile (for SOAR)
+uv run scp-cli scan ./path/to/repos --export openc2 -o actuators.json
+```
+
+### Transform JSON to Other Formats
+
+```bash
+# Scan once, transform many
+uv run scp-cli scan ./repos --export json -o graph.json
+uv run scp-cli transform graph.json --export mermaid -o diagram.mmd
+uv run scp-cli transform graph.json --export openc2 -o actuators.json
 ```
 
 ### Scan GitHub Organization
@@ -47,15 +59,17 @@ uv run scp-cli scan ./repos
 
 | Command | Description |
 |---------|-------------|
-| `scp validate <path>` | Validate SCP files |
-| `scp scan <path>` | Scan local directory |
-| `scp scan-github <org>` | Scan GitHub org |
-| `scp version` | Show version |
+| `scp-cli validate <path>` | Validate SCP files |
+| `scp-cli scan <path>` | Scan local directory |
+| `scp-cli scan-github <org>` | Scan GitHub org |
+| `scp-cli transform <json>` | Transform JSON to other formats |
+| `scp-cli version` | Show version |
 
 ## Export Formats
 
 - **JSON**: Graph with nodes/edges arrays
 - **Mermaid**: Flowchart diagram with tier styling
+- **OpenC2**: Actuator profile for SOAR integration
 
 ## Environment Variables
 
@@ -65,3 +79,4 @@ uv run scp-cli scan ./repos
 | `NEO4J_URI` | Neo4j connection URI |
 | `NEO4J_USER` | Neo4j username |
 | `NEO4J_PASSWORD` | Neo4j password |
+

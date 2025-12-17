@@ -1,0 +1,47 @@
+scp: "0.1.0"
+
+system:
+  urn: "urn:scp:crowdstrike-falcon:rtr"
+  name: "CrowdStrike Falcon RTR"
+  description: "Real-Time Response endpoint security platform"
+  classification:
+    tier: 1
+    domain: "security"
+    tags: ["edr", "endpoint", "xdr"]
+
+ownership:
+  team: "security-operations"
+  contacts:
+    - type: "slack"
+      ref: "slack://channel/C123SECOPS"
+
+provides:
+  - capability: "host-containment"
+    type: "rest"
+    contract:
+      type: "openapi"
+      ref: "./api/containment.yaml"
+    x-security:
+      actuator_profile: "edr"
+      actions: ["contain", "allow", "query"]
+      targets: ["hostname", "device_id"]
+
+  - capability: "threat-intelligence"
+    type: "rest"
+    contract:
+      type: "openapi"
+      ref: "./api/intel.yaml"
+    x-security:
+      actuator_profile: "edr"
+      actions: ["query"]
+      targets: ["ioc", "hash", "domain"]
+
+  - capability: "process-control"
+    type: "rest"
+    contract:
+      type: "openapi"
+      ref: "./api/rtr.yaml"
+    x-security:
+      actuator_profile: "edr"
+      actions: ["remediate", "query"]
+      targets: ["process", "file"]
