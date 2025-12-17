@@ -240,7 +240,7 @@ def import_json(data: dict[str, Any]) -> list[SCPManifest]:
     """
     from .models import (
         System, Classification, Ownership, Capability, 
-        Dependency, SecurityExtension, Contract
+        Dependency, SecurityExtension
     )
     
     manifests: list[SCPManifest] = []
