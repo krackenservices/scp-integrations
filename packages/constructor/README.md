@@ -48,11 +48,15 @@ uv run scp-cli scan-github myorg --export mermaid
 ### Sync to Neo4j
 
 ```bash
+# Export directly to Neo4j
+uv run scp-cli scan ./repos --export neo4j --neo4j-uri bolt://localhost:7687
+
+# Or use environment variables
 export NEO4J_URI=bolt://localhost:7687
 export NEO4J_USER=neo4j
 export NEO4J_PASSWORD=password
 
-uv run scp-cli scan ./repos
+uv run scp-cli scan ./repos --export neo4j
 ```
 
 ## Commands
@@ -70,6 +74,7 @@ uv run scp-cli scan ./repos
 - **JSON**: Graph with nodes/edges arrays
 - **Mermaid**: Flowchart diagram with tier styling
 - **OpenC2**: Actuator profile for SOAR integration
+- **Neo4j**: Direct sync to Neo4j graph database
 
 ## Environment Variables
 
