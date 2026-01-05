@@ -23,15 +23,82 @@ app = typer.Typer(
 console = Console()
 
 
+def _export_manifests(
+    manifests: list,
+    export_format: str,
+    output: Optional[Path],
+    stdout: bool,
+    neo4j_uri: Optional[str] = None,
+    neo4j_user: Optional[str] = None,
+    neo4j_password: Optional[str] = None,
+):
+    """Export manifests to the specified format."""
+    manifest_list = [m for m, _ in manifests]
+    
+    if export_format == "neo4j":
+        # Neo4j export
+        if not neo4j_uri:
+            console.print("[red]Error:[/] --neo4j-uri required for neo4j export (or set NEO4J_URI env var)")
+            raise typer.Exit(1)
+        
+        # Defaults for user/password
+        user = neo4j_user or "neo4j"
+        password = neo4j_password or "neo4j"
+        
+        console.print(f"\n[bold blue]Exporting to Neo4j[/] {neo4j_uri}")
+        
+        try:
+            with Neo4jGraph(neo4j_uri, user, password) as graph:
+                graph.setup_constraints()
+                stats = graph.sync_manifests(manifests)
+                
+                console.print(Panel(
+                    f"Systems: {stats.systems_created} created, {stats.systems_updated} updated\n"
+                    f"Capabilities: {stats.capabilities_created}\n"
+                    f"Dependencies: {stats.dependencies_created}",
+                    title="Graph Stats",
+                    border_style="green",
+                ))
+        except Exception as e:
+            console.print(f"[red]Neo4j Error:[/] {e}")
+            raise typer.Exit(1)
+        return  # No file output for neo4j
+    
+    elif export_format == "json":
+        data = export_json(manifest_list)
+        content = json.dumps(data, indent=2)
+        default_ext = "json"
+    elif export_format == "mermaid":
+        content = export_mermaid(manifest_list)
+        default_ext = "mmd"
+    elif export_format == "openc2":
+        data = export_openc2(manifest_list)
+        content = json.dumps(data, indent=2)
+        default_ext = "json"
+    else:
+        console.print(f"[red]Unknown export format:[/] {export_format}. Use: json, mermaid, openc2, neo4j")
+        raise typer.Exit(1)
+    
+    if stdout:
+        print(content)
+    else:
+        if output:
+            out_file = output
+        else:
+            out_file = Path(f"scp.{default_ext}")
+        out_file.write_text(content)
+        console.print(f"\n[green]Exported to[/] {out_file}")
+
+
 @app.command()
 def scan(
     path: Path = typer.Argument(..., help="Directory to scan for scp.yaml files"),
-    neo4j_uri: Optional[str] = typer.Option(None, "--neo4j-uri", envvar="NEO4J_URI", help="Neo4j URI"),
-    neo4j_user: Optional[str] = typer.Option(None, "--neo4j-user", envvar="NEO4J_USER", help="Neo4j username"),
-    neo4j_password: Optional[str] = typer.Option(None, "--neo4j-password", envvar="NEO4J_PASSWORD", help="Neo4j password"),
-    export_format: Optional[str] = typer.Option(None, "--export", "-e", help="Export format: json, mermaid"),
+    export_format: Optional[str] = typer.Option(None, "--export", "-e", help="Export format: json, mermaid, openc2, neo4j"),
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output file (default: scp.json or scp.mmd)"),
     stdout: bool = typer.Option(False, "--stdout", help="Output to stdout instead of file"),
+    neo4j_uri: Optional[str] = typer.Option(None, "--neo4j-uri", envvar="NEO4J_URI", help="Neo4j URI (required for --export neo4j)"),
+    neo4j_user: Optional[str] = typer.Option(None, "--neo4j-user", envvar="NEO4J_USER", help="Neo4j username"),
+    neo4j_password: Optional[str] = typer.Option(None, "--neo4j-password", envvar="NEO4J_PASSWORD", help="Neo4j password"),
 ):
     """Scan a local directory for SCP files and build the architecture graph."""
     
@@ -66,65 +133,24 @@ def scan(
     if errors:
         console.print(f"\n[yellow]Warning:[/] {len(errors)} files failed to parse")
     
-    # Sync to Neo4j if configured
-    if neo4j_uri and neo4j_user and neo4j_password:
-        console.print(f"\n[bold blue]Syncing to Neo4j[/] {neo4j_uri}")
-        
-        try:
-            with Neo4jGraph(neo4j_uri, neo4j_user, neo4j_password) as graph:
-                graph.setup_constraints()
-                stats = graph.sync_manifests(manifests)
-                
-                console.print(Panel(
-                    f"Systems: {stats.systems_created} created, {stats.systems_updated} updated\n"
-                    f"Capabilities: {stats.capabilities_created}\n"
-                    f"Dependencies: {stats.dependencies_created}",
-                    title="Graph Stats",
-                    border_style="green",
-                ))
-        except Exception as e:
-            console.print(f"[red]Neo4j Error:[/] {e}")
-            raise typer.Exit(1)
-    
     # Export if requested
     if export_format:
-        manifest_list = [m for m, _ in manifests]
-        
-        if export_format == "json":
-            data = export_json(manifest_list)
-            content = json.dumps(data, indent=2)
-        elif export_format == "mermaid":
-            content = export_mermaid(manifest_list)
-        elif export_format == "openc2":
-            data = export_openc2(manifest_list)
-            content = json.dumps(data, indent=2)
-        else:
-            console.print(f"[red]Unknown export format:[/] {export_format}. Use: json, mermaid, openc2")
-            raise typer.Exit(1)
-        
-        if stdout:
-            # Output to stdout
-            print(content)
-        else:
-            # Write to file
-            if output:
-                out_file = output
-            else:
-                out_file = Path(f"scp.{'mmd' if export_format == 'mermaid' else 'json'}")
-            out_file.write_text(content)
-            console.print(f"\n[green]Exported to[/] {out_file}")
+        _export_manifests(
+            manifests, export_format, output, stdout,
+            neo4j_uri, neo4j_user, neo4j_password
+        )
 
 
 @app.command("scan-github")
 def scan_github(
     org: str = typer.Argument(..., help="GitHub organization to scan"),
     token: Optional[str] = typer.Option(None, "--token", envvar="GITHUB_TOKEN", help="GitHub personal access token"),
-    neo4j_uri: Optional[str] = typer.Option(None, "--neo4j-uri", envvar="NEO4J_URI", help="Neo4j URI"),
-    neo4j_user: Optional[str] = typer.Option(None, "--neo4j-user", envvar="NEO4J_USER", help="Neo4j username"),
-    neo4j_password: Optional[str] = typer.Option(None, "--neo4j-password", envvar="NEO4J_PASSWORD", help="Neo4j password"),
-    export_format: Optional[str] = typer.Option(None, "--export", "-e", help="Export format: json, mermaid"),
+    export_format: Optional[str] = typer.Option(None, "--export", "-e", help="Export format: json, mermaid, openc2, neo4j"),
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output file (default: scp.json or scp.mmd)"),
     stdout: bool = typer.Option(False, "--stdout", help="Output to stdout instead of file"),
+    neo4j_uri: Optional[str] = typer.Option(None, "--neo4j-uri", envvar="NEO4J_URI", help="Neo4j URI (required for --export neo4j)"),
+    neo4j_user: Optional[str] = typer.Option(None, "--neo4j-user", envvar="NEO4J_USER", help="Neo4j username"),
+    neo4j_password: Optional[str] = typer.Option(None, "--neo4j-password", envvar="NEO4J_PASSWORD", help="Neo4j password"),
 ):
     """Scan a GitHub organization for SCP files."""
     
@@ -151,53 +177,12 @@ def scan_github(
     
     manifests = [(f.manifest, f.repo) for f in scp_files]
     
-    # Sync to Neo4j if configured
-    if neo4j_uri and neo4j_user and neo4j_password:
-        console.print(f"\n[bold blue]Syncing to Neo4j[/] {neo4j_uri}")
-        
-        try:
-            with Neo4jGraph(neo4j_uri, neo4j_user, neo4j_password) as graph:
-                graph.setup_constraints()
-                stats = graph.sync_manifests(manifests)
-                
-                console.print(Panel(
-                    f"Systems: {stats.systems_created} created, {stats.systems_updated} updated\n"
-                    f"Capabilities: {stats.capabilities_created}\n"
-                    f"Dependencies: {stats.dependencies_created}",
-                    title="Graph Stats",
-                    border_style="green",
-                ))
-        except Exception as e:
-            console.print(f"[red]Neo4j Error:[/] {e}")
-            raise typer.Exit(1)
-    
     # Export if requested
     if export_format:
-        manifest_list = [m for m, _ in manifests]
-        
-        if export_format == "json":
-            data = export_json(manifest_list)
-            content = json.dumps(data, indent=2)
-        elif export_format == "mermaid":
-            content = export_mermaid(manifest_list)
-        elif export_format == "openc2":
-            data = export_openc2(manifest_list)
-            content = json.dumps(data, indent=2)
-        else:
-            console.print(f"[red]Unknown export format:[/] {export_format}. Use: json, mermaid, openc2")
-            raise typer.Exit(1)
-        
-        if stdout:
-            # Output to stdout
-            print(content)
-        else:
-            # Write to file
-            if output:
-                out_file = output
-            else:
-                out_file = Path(f"scp.{'mmd' if export_format == 'mermaid' else 'json'}")
-            out_file.write_text(content)
-            console.print(f"\n[green]Exported to[/] {out_file}")
+        _export_manifests(
+            manifests, export_format, output, stdout,
+            neo4j_uri, neo4j_user, neo4j_password
+        )
 
 
 @app.command()
@@ -246,14 +231,17 @@ def validate(
 @app.command()
 def transform(
     input_file: Path = typer.Argument(..., help="JSON file from 'scp-cli scan' output"),
-    export_format: str = typer.Option(..., "--export", "-e", help="Export format: mermaid, openc2"),
+    export_format: str = typer.Option(..., "--export", "-e", help="Export format: mermaid, openc2, neo4j"),
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output file"),
     stdout: bool = typer.Option(False, "--stdout", help="Output to stdout instead of file"),
+    neo4j_uri: Optional[str] = typer.Option(None, "--neo4j-uri", envvar="NEO4J_URI", help="Neo4j URI (required for --export neo4j)"),
+    neo4j_user: Optional[str] = typer.Option(None, "--neo4j-user", envvar="NEO4J_USER", help="Neo4j username"),
+    neo4j_password: Optional[str] = typer.Option(None, "--neo4j-password", envvar="NEO4J_PASSWORD", help="Neo4j password"),
 ):
     """Transform a JSON graph to other formats.
     
     Use this when you have a previously exported JSON file and want to
-    convert it to Mermaid diagrams or OpenC2 actuator profiles.
+    convert it to Mermaid diagrams, OpenC2 actuator profiles, or sync to Neo4j.
     """
     if not input_file.exists():
         console.print(f"[red]Error:[/] File not found: {input_file}")
@@ -271,33 +259,13 @@ def transform(
     manifests = import_json(data)
     console.print(f"Loaded [green]{len(manifests)}[/] systems")
     
-    # Transform to requested format
-    if export_format == "mermaid":
-        content = export_mermaid(manifests)
-        default_ext = "mmd"
-    elif export_format == "openc2":
-        result = export_openc2(manifests)
-        content = json.dumps(result, indent=2)
-        default_ext = "json"
-        console.print(f"Found [green]{result['count']}[/] security actuators")
-    elif export_format == "json":
-        # Re-export as JSON (useful for filtering)
-        result = export_json(manifests)
-        content = json.dumps(result, indent=2)
-        default_ext = "json"
-    else:
-        console.print(f"[red]Unknown export format:[/] {export_format}. Use: mermaid, openc2, json")
-        raise typer.Exit(1)
+    # Create manifests list in expected format (manifest, source)
+    manifests_with_source = [(m, "json-import") for m in manifests]
     
-    if stdout:
-        print(content)
-    else:
-        if output:
-            out_file = output
-        else:
-            out_file = Path(f"scp-transformed.{default_ext}")
-        out_file.write_text(content)
-        console.print(f"[green]Exported to[/] {out_file}")
+    _export_manifests(
+        manifests_with_source, export_format, output, stdout,
+        neo4j_uri, neo4j_user, neo4j_password
+    )
 
 
 @app.command()

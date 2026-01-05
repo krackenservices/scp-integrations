@@ -41,6 +41,9 @@ cli: ## Run the SCP CLI (pass args with ARGS="...")
 scan: ## Scan a directory for scp.yaml files (use DIR=path)
 	uv run scp-cli scan $(DIR)
 
+scan-neo4j: ## Scan and export to Neo4j (use DIR=path, requires NEO4J_URI)
+	uv run scp-cli scan $(DIR) --export neo4j
+
 test-constructor: ## Run constructor package tests
 	cd packages/constructor && uv run pytest
 
