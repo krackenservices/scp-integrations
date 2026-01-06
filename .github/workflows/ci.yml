@@ -118,8 +118,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}},prefix=constructor-v
-            type=semver,pattern={{major}}.{{minor}},prefix=constructor-v
+            type=match,pattern=constructor-v(.*),group=1
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/constructor-v') }}
 
       - name: Build and push
         uses: docker/build-push-action@v5
