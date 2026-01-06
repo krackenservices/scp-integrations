@@ -179,8 +179,9 @@ class Neo4jGraph:
                     session.run("""
                         MATCH (from:System {urn: $from_urn})
                         MATCH (to:System {urn: $to_urn})
-                        MERGE (from)-[r:DEPENDS_ON {capability: $capability}]->(to)
+                        MERGE (from)-[r:DEPENDS_ON]->(to)
                         ON CREATE SET
+                            r.capability = $capability,
                             r.type = $type,
                             r.criticality = $criticality,
                             r.failure_mode = $failure_mode,
@@ -188,6 +189,7 @@ class Neo4jGraph:
                             r.declared = true,
                             r.created_at = datetime()
                         ON MATCH SET
+                            r.capability = $capability,
                             r.type = $type,
                             r.criticality = $criticality,
                             r.failure_mode = $failure_mode,
