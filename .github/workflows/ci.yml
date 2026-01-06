@@ -85,6 +85,52 @@ jobs:
           path: dist/*
           retention-days: 1
 
+  # Build Docker image for constructor
+  docker-build:
+    name: Constructor - Docker Build
+    needs: constructor
+    if: ${{ needs.changes.outputs.constructor == 'true' || startsWith(github.ref, 'refs/tags/constructor-v') }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/constructor
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        if: startsWith(github.ref, 'refs/tags/constructor-v')
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/scp-constructor
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}},prefix=constructor-v
+            type=semver,pattern={{major}}.{{minor}},prefix=constructor-v
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: packages/constructor
+          push: ${{ startsWith(github.ref, 'refs/tags/constructor-v') }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   # Publish constructor to PyPI on tag
   publish-constructor:
     name: Constructor - Publish
