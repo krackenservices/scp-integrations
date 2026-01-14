@@ -41,7 +41,10 @@ jobs:
             VERSION=${GITHUB_REF_NAME#constructor-v}
             echo "Type: Tagged Release"
           else
-            LAST_TAG=$(git tag -l 'constructor-v*' --sort=-v:refname | head -n1 || echo "constructor-v0.0.0")
+            LAST_TAG=$(git tag -l 'constructor-v*' --sort=-v:refname | head -n1)
+            if [ -z "$LAST_TAG" ]; then
+              LAST_TAG="constructor-v0.0.0"
+            fi
             VERSION="${LAST_TAG#constructor-v}-dev"
             echo "Type: Dev Build (Last tag: $LAST_TAG)"
           fi
