@@ -13,6 +13,8 @@ from .sync import load_graph_json, sync_to_servicenow, print_sync_results
 
 
 app = typer.Typer(help="ServiceNow CMDB integration for SCP unified model")
+cmdb_app = typer.Typer(help="CMDB operations")
+app.add_typer(cmdb_app, name="cmdb")
 console = Console()
 
 
@@ -43,7 +45,7 @@ def get_auth_from_env() -> ServiceNowAuth:
     )
 
 
-@app.command()
+@cmdb_app.command()
 def sync(
     graph_file: Path = typer.Argument(..., help="Path to SCP unified JSON graph"),
     instance: Optional[str] = typer.Option(
@@ -117,7 +119,7 @@ def sync(
         raise typer.Exit(1)
 
 
-@app.command()
+@cmdb_app.command()
 def validate(
     graph_file: Path = typer.Argument(..., help="Path to SCP unified JSON graph"),
 ):

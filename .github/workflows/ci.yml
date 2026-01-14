@@ -5,6 +5,7 @@ on:
     branches: ["main"]
     tags:
       - "constructor-v*"
+      - "servicenow-v*"
   pull_request:
     branches: ["main"]
 
@@ -15,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       constructor: ${{ steps.filter.outputs.constructor }}
+      servicenow: ${{ steps.filter.outputs.servicenow }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -23,140 +25,21 @@ jobs:
           filters: |
             constructor:
               - 'packages/constructor/**'
+            servicenow:
+              - 'packages/vendor/servicenow-cmdb/**'
 
-  # Build and test constructor package
+  # Constructor Workflow
   constructor:
-    name: Constructor - Build & Test
+    name: Constructor
     needs: changes
     if: ${{ needs.changes.outputs.constructor == 'true' || startsWith(github.ref, 'refs/tags/constructor-v') }}
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packages/constructor
+    uses: ./.github/workflows/constructor.yml
+    secrets: inherit
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          version: "latest"
-
-      - name: Set up Python
-        run: uv python install 3.12
-
-      - name: Install dependencies
-        working-directory: .
-        run: uv sync --all-groups
-
-      - name: Lint (Ruff)
-        run: uv run ruff check .
-
-      - name: Run tests
-        run: uv run pytest
-
-      - name: Sync Project Version
-        run: |
-          if [[ "$GITHUB_REF" == refs/tags/constructor-v* ]]; then
-            VERSION=${GITHUB_REF_NAME#constructor-v}
-            echo "Type: Tagged Release"
-          else
-            LAST_TAG=$(git tag -l 'constructor-v*' --sort=-v:refname | head -n1 || echo "constructor-v0.0.0")
-            VERSION="${LAST_TAG#constructor-v}-dev"
-            echo "Type: Dev Build (Last tag: $LAST_TAG)"
-          fi
-
-          echo "Syncing pyproject.toml to version: $VERSION"
-          uv version "$VERSION"
-          uv version
-
-      - name: Build package
-        working-directory: .
-        run: uv build --package scp-constructor
-
-      - name: Upload Build Artifact
-        if: startsWith(github.ref, 'refs/tags/constructor-v')
-        uses: actions/upload-artifact@v4
-        with:
-          name: constructor-dist
-          path: dist/*
-          retention-days: 1
-
-  # Build Docker image for constructor
-  docker-build:
-    name: Constructor - Docker Build
-    needs: constructor
-    if: ${{ needs.changes.outputs.constructor == 'true' || startsWith(github.ref, 'refs/tags/constructor-v') }}
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packages/constructor
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to GitHub Container Registry
-        if: startsWith(github.ref, 'refs/tags/constructor-v')
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/scp-constructor
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}},prefix=constructor-v
-            type=semver,pattern={{major}}.{{minor}},prefix=constructor-v
-
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: packages/constructor
-          push: ${{ startsWith(github.ref, 'refs/tags/constructor-v') }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # Publish constructor to PyPI on tag
-  publish-constructor:
-    name: Constructor - Publish
-    needs: constructor
-    if: startsWith(github.ref, 'refs/tags/constructor-v')
-    runs-on: ubuntu-latest
-    environment: pypi
-    permissions:
-      contents: write
-      id-token: write
-
-    steps:
-      - name: Download Build Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: constructor-dist
-          path: dist/
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*
-          generate_release_notes: true
-
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: dist/
-
+  # ServiceNow CMDB Workflow
+  servicenow:
+    name: ServiceNow CMDB
+    needs: changes
+    if: ${{ needs.changes.outputs.servicenow == 'true' || startsWith(github.ref, 'refs/tags/servicenow-v') }}
+    uses: ./.github/workflows/servicenow.yml
+    secrets: inherit

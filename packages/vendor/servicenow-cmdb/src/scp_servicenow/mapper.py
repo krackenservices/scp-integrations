@@ -42,6 +42,15 @@ def map_node_to_ci(node: dict[str, Any]) -> dict[str, Any]:
     if team:
         ci_data["u_support_team"] = team  # Using custom field for simplicity
 
+    # Map contacts (email) to owned_by/managed_by
+    # We return the email address here, and sync.py will resolve it to a sys_user
+    contacts = node.get("contacts", [])
+    for contact in contacts:
+        if contact.get("type") == "email":
+            # Store temporarily as _support_email to be resolved by sync
+            ci_data["_support_email"] = contact.get("ref")
+            break
+
     return ci_data
 
 

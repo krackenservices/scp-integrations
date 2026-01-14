@@ -199,3 +199,24 @@ class ServiceNowClient:
         if result.get("result"):
             return result["result"][0]
         return None
+
+    def get_user_by_email(self, email: str) -> dict[str, Any] | None:
+        """Get ServiceNow user by email.
+
+        Args:
+            email: Email address
+
+        Returns:
+            User record or None if not found
+        """
+        query_params = {
+            "sysparm_query": f"email={email}",
+            "sysparm_limit": 1,
+            "sysparm_fields": "sys_id,name,email,user_name",
+        }
+
+        result = self._request("GET", "/api/now/table/sys_user", params=query_params)
+
+        if result.get("result"):
+            return result["result"][0]
+        return None

@@ -91,6 +91,19 @@ def sync_to_servicenow(
             try:
                 ci_data = map_node_to_ci(node)
 
+                # Resolve support email to user
+                support_email = ci_data.pop("_support_email", None)
+                if not dry_run and support_email:
+                    user = client.get_user_by_email(support_email)
+                    if user:
+                        ci_data["owned_by"] = user["sys_id"]
+                    else:
+                        console.print(
+                            f"  [yellow]Warning: User not found for email {support_email}[/yellow]"
+                        )
+                elif dry_run and support_email:
+                    console.print(f"  [dim]Would look up user: {support_email}[/dim]")
+
                 if dry_run:
                     console.print(f"  [dim]Would sync: {node_name} ({node_id})[/dim]")
                     ci_mapping[node_id] = "dry-run-sys-id"
