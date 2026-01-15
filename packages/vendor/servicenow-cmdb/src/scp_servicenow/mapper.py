@@ -2,8 +2,11 @@
 
 from typing import Any
 
+from .config import CMDBConfig
 
-TIER_TO_CRITICALITY = {
+
+# Default tier mapping (used if config doesn't specify)
+DEFAULT_TIER_TO_CRITICALITY = {
     1: "1 - Critical",
     2: "2 - High",
     3: "3 - Medium",
@@ -12,44 +15,68 @@ TIER_TO_CRITICALITY = {
 }
 
 
-def map_node_to_ci(node: dict[str, Any]) -> dict[str, Any]:
+def map_node_to_ci(
+    node: dict[str, Any], config: CMDBConfig | None = None
+) -> dict[str, Any]:
     """Map SCP node to ServiceNow CI payload.
 
     Args:
         node: SCP graph node
+        config: Optional CMDBConfig for custom mappings
 
     Returns:
         ServiceNow CI data payload
     """
+    if config is None:
+        config = CMDBConfig()
+
     ci_data: dict[str, Any] = {
         "name": node.get("name", ""),
     }
 
-    # Map tier to business_criticality
+    # Map tier to business_criticality using config
     tier = node.get("tier")
     if tier is not None:
-        ci_data["business_criticality"] = TIER_TO_CRITICALITY.get(tier, "3 - Medium")
+        ci_data["business_criticality"] = config.get_tier_criticality(tier)
 
-    # Map domain to custom field (u_business_domain)
-    domain = node.get("domain")
-    if domain:
-        ci_data["u_business_domain"] = domain
+    # Check if config wants to use custom fields
+    field_mappings = config.field_mappings or {}
 
-    # Map team to support_group
-    # Note: This requires the team name to match an existing assignment group
-    # In production, you might want to lookup the sys_id of the group
-    team = node.get("team")
-    if team:
-        ci_data["u_support_team"] = team  # Using custom field for simplicity
+    # Map domain if configured
+    if "u_business_domain" in field_mappings.values():
+        domain = node.get("domain")
+        if domain:
+            ci_data["u_business_domain"] = domain
+
+    # Map team if configured
+    if "u_support_team" in field_mappings.values():
+        team = node.get("team")
+        if team:
+            ci_data["u_support_team"] = team
 
     # Map contacts (email) to owned_by/managed_by
     # We return the email address here, and sync.py will resolve it to a sys_user
     contacts = node.get("contacts", [])
     for contact in contacts:
-        if contact.get("type") == "email":
+        if (
+            contact.get("type") == "email"
+            and config.contact_resolution.resolve_email_to_owned_by
+        ):
             # Store temporarily as _support_email to be resolved by sync
             ci_data["_support_email"] = contact.get("ref")
             break
+
+    # Format comments field if configured
+    comments_fields = field_mappings.get("comments", [])
+    if comments_fields:
+        comments = config.format_comments(
+            team=node.get("team"),
+            domain=node.get("domain"),
+            contacts=contacts,
+            escalation=node.get("escalation", []),
+        )
+        if comments:
+            ci_data["comments"] = comments
 
     return ci_data
 
@@ -81,7 +108,7 @@ def validate_mapping(graph_data: dict[str, Any]) -> list[dict[str, Any]]:
 
         # Warn about invalid tier values
         tier = node.get("tier")
-        if tier is not None and tier not in TIER_TO_CRITICALITY:
+        if tier is not None and tier not in DEFAULT_TIER_TO_CRITICALITY:
             issues.append(
                 {
                     "severity": "warning",

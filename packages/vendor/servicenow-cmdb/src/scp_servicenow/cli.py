@@ -10,6 +10,7 @@ from rich.console import Console
 from .client import ServiceNowAuth, ServiceNowClient
 from .mapper import validate_mapping
 from .sync import load_graph_json, sync_to_servicenow, print_sync_results
+from .config import CMDBConfig
 
 
 app = typer.Typer(help="ServiceNow CMDB integration for SCP unified model")
@@ -60,6 +61,9 @@ def sync(
     dry_run: bool = typer.Option(
         False, "--dry-run", "-d", help="Validate without making changes"
     ),
+    config_file: Optional[Path] = typer.Option(
+        None, "--config", help="Path to cmdb.yaml config file"
+    ),
 ):
     """Sync SCP graph to ServiceNow CMDB.
 
@@ -76,6 +80,15 @@ def sync(
     except Exception as e:
         console.print(f"[red]Error loading JSON: {e}[/red]")
         raise typer.Exit(1)
+
+    # Load configuration
+    try:
+        config = CMDBConfig.load(config_file)
+    except Exception as e:
+        console.print(
+            f"[yellow]Warning: Could not load config, using defaults: {e}[/yellow]"
+        )
+        config = CMDBConfig()
 
     # Get authentication
     auth = get_auth_from_env()
@@ -105,7 +118,9 @@ def sync(
 
     # Sync
     try:
-        result = sync_to_servicenow(graph_data, client, ci_class, dry_run)
+        result = sync_to_servicenow(
+            graph_data, client, ci_class, dry_run, config=config
+        )
         print_sync_results(result, dry_run)
 
         if result.failed:
@@ -116,6 +131,71 @@ def sync(
         raise typer.Exit(130)
     except Exception as e:
         console.print(f"\n[red]Sync failed: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@cmdb_app.command()
+def init(
+    output: Path = typer.Option(
+        Path("cmdb.yaml"), "--output", "-o", help="Output path for config file"
+    ),
+    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing file"),
+):
+    """Generate a cmdb.yaml configuration file with defaults.
+
+    This creates a configuration template that you can customize for your
+    ServiceNow instance. The integration works with sensible defaults, so
+    this file is OPTIONAL and only needed to override default behavior.
+
+    Example:
+        scp-servicenow cmdb init
+        scp-servicenow cmdb init --output my-config.yaml
+    """
+    if output.exists() and not force:
+        console.print(
+            f"[yellow]Warning: {output} already exists. Use --force to overwrite.[/yellow]"
+        )
+        raise typer.Exit(1)
+
+    # Generate default config
+    config = CMDBConfig()
+
+    # Add helpful comments
+    yaml_content = f"""# ServiceNow CMDB Integration Configuration
+#
+# This file is OPTIONAL. The integration works with sensible defaults.
+# Use this to customize field mappings for your ServiceNow instance.
+#
+# Default behavior (no config file):
+#   - Maps tier to business_criticality
+#   - Stores team, domain, contacts, escalation in comments field
+#   - Resolves email contacts to owned_by field
+#
+# To use custom ServiceNow fields:
+#   - Uncomment the u_* fields below
+#   - Ensure those fields exist in your ServiceNow instance
+
+{config.to_yaml()}
+
+# Example: Using custom fields (requires creating them in ServiceNow)
+# field_mappings:
+#   name: name
+#   business_criticality: tier
+#   u_business_domain: domain        # Custom field for domain
+#   u_support_team: team              # Custom field for team
+#   comments:
+#     - contacts
+#     - escalation
+"""
+
+    try:
+        output.write_text(yaml_content)
+        console.print(f"[green]✓ Created configuration template: {output}[/green]")
+        console.print(
+            "\n[dim]Edit this file to customize field mappings for your instance.[/dim]"
+        )
+    except Exception as e:
+        console.print(f"[red]Error writing config file: {e}[/red]")
         raise typer.Exit(1)
 
 

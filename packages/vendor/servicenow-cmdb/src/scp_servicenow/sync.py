@@ -9,6 +9,7 @@ from rich.table import Table
 
 from .client import ServiceNowClient
 from .mapper import map_node_to_ci
+from .config import CMDBConfig
 
 
 console = Console()
@@ -48,6 +49,7 @@ def sync_to_servicenow(
     client: ServiceNowClient,
     ci_class: str = "cmdb_ci_service_discovered",
     dry_run: bool = False,
+    config: CMDBConfig | None = None,
 ) -> SyncResult:
     """Sync SCP graph to ServiceNow CMDB.
 
@@ -56,6 +58,7 @@ def sync_to_servicenow(
         client: ServiceNow API client
         ci_class: CI class to create (default: cmdb_ci_service_discovered)
         dry_run: If True, validate but don't make changes
+        config: Optional CMDBConfig for custom field mappings
 
     Returns:
         Sync results
@@ -89,7 +92,7 @@ def sync_to_servicenow(
             )
 
             try:
-                ci_data = map_node_to_ci(node)
+                ci_data = map_node_to_ci(node, config=config)
 
                 # Resolve support email to user
                 support_email = ci_data.pop("_support_email", None)

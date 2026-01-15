@@ -9,6 +9,7 @@ dependencies = [
     "httpx>=0.25",
     "typer>=0.9",
     "rich>=13.0",
+    "pyyaml>=6.0.3",
 ]
 
 [project.scripts]
