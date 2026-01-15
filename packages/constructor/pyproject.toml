@@ -5,7 +5,7 @@ description = "Build architecture models from scp.yaml files"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "scp-sdk>=0.1.0",
+    "scp-sdk>=0.2.0",
     "typer>=0.9",
     "rich>=13.0",
     "neo4j>=5.0",
