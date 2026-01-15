@@ -36,9 +36,9 @@ jobs:
     uses: ./.github/workflows/constructor.yml
     secrets: inherit
 
-  # ServiceNow CMDB Workflow
+  # ServiceNow Workflow
   servicenow:
-    name: ServiceNow CMDB
+    name: ServiceNow
     needs: changes
     if: ${{ needs.changes.outputs.servicenow == 'true' || startsWith(github.ref, 'refs/tags/servicenow-v') }}
     uses: ./.github/workflows/servicenow.yml

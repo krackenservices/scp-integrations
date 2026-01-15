@@ -1,4 +1,4 @@
-name: ServiceNow CMDB Workflow
+name: ServiceNow Workflow
 
 on:
   workflow_call:
