@@ -139,12 +139,7 @@ class CMDBConfig(BaseModel):
         # Format contacts
         contacts_str = ""
         if contacts:
-            contacts_str = "\n".join(
-                [
-                    f"  - {c.get('type', 'unknown')}: {c.get('ref', '')}"
-                    for c in contacts
-                ]
-            )
+            contacts_str = "\n".join([f"  - {c.type}: {c.ref}" for c in contacts])
 
         # Format escalation
         escalation_str = ""

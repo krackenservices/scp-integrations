@@ -56,11 +56,11 @@ def map_node_to_ci(
     contacts = node.contacts or []
     for contact in contacts:
         if (
-            contact.get("type") == "email"
+            contact.type == "email"
             and config.contact_resolution.resolve_email_to_owned_by
         ):
             # Store temporarily as _support_email to be resolved by sync
-            ci_data["_support_email"] = contact.get("ref")
+            ci_data["_support_email"] = contact.ref
             break
 
     # Format comments field if configured

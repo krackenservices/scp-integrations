@@ -51,8 +51,6 @@ def sync_to_servicenow(
     """
     result = SyncResult()
 
-    result = SyncResult()
-
     system_nodes = list(graph.systems())
 
     console.print(
