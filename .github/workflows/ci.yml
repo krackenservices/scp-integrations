@@ -26,7 +26,7 @@ jobs:
             constructor:
               - 'packages/constructor/**'
             servicenow:
-              - 'packages/vendor/servicenow-cmdb/**'
+              - 'packages/vendor/servicenow/**'
 
   # Constructor Workflow
   constructor:
