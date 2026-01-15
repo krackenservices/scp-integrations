@@ -1,8 +1,26 @@
 """Transform SCP unified JSON to ServiceNow CMDB model."""
 
+from enum import Enum
 from typing import Any
+
 from scp_sdk import Graph, SystemNode
+
 from .config import CMDBConfig
+
+
+class IssueSeverity(str, Enum):
+    """Severity levels for validation issues."""
+
+    ERROR = "error"
+    WARNING = "warning"
+
+
+__all__ = [
+    "map_node_to_ci",
+    "validate_mapping",
+    "IssueSeverity",
+    "DEFAULT_TIER_TO_CRITICALITY",
+]
 
 
 # Default tier mapping (used if config doesn't specify)
@@ -94,7 +112,7 @@ def validate_mapping(graph: Graph) -> list[dict[str, Any]]:
         if not system.name:
             issues.append(
                 {
-                    "severity": "error",
+                    "severity": IssueSeverity.ERROR,
                     "node_id": system.urn,
                     "message": "System node missing 'name' field",
                 }
@@ -104,7 +122,7 @@ def validate_mapping(graph: Graph) -> list[dict[str, Any]]:
         if system.tier is not None and system.tier not in DEFAULT_TIER_TO_CRITICALITY:
             issues.append(
                 {
-                    "severity": "warning",
+                    "severity": IssueSeverity.WARNING,
                     "node_id": system.urn,
                     "message": f"Invalid tier value {system.tier}, expected 1-5",
                 }
@@ -116,7 +134,7 @@ def validate_mapping(graph: Graph) -> list[dict[str, Any]]:
         if not graph.find_system(edge.from_urn):
             issues.append(
                 {
-                    "severity": "error",
+                    "severity": IssueSeverity.ERROR,
                     "edge": edge,
                     "message": f"Dependency source '{edge.from_urn}' not found in systems",
                 }
@@ -126,7 +144,7 @@ def validate_mapping(graph: Graph) -> list[dict[str, Any]]:
         if not graph.find_system(edge.to_urn):
             issues.append(
                 {
-                    "severity": "warning",
+                    "severity": IssueSeverity.WARNING,
                     "edge": edge,
                     "message": f"Dependency target '{edge.to_urn}' not found in systems (might be external)",
                 }

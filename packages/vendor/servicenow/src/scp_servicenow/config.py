@@ -7,6 +7,9 @@ import yaml
 from pydantic import BaseModel, Field
 
 
+__all__ = ["CMDBConfig", "ContactResolutionConfig"]
+
+
 # Default configuration constants
 DEFAULT_TIER_MAPPINGS = {
     1: "1 - Critical",

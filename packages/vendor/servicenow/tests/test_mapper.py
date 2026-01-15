@@ -1,8 +1,14 @@
-"""Tests for the mapper module."""
+"""Comprehensive validation tests for mapper module."""
 
-from scp_sdk import SystemNode
-from scp_servicenow.mapper import map_node_to_ci, DEFAULT_TIER_TO_CRITICALITY
+from scp_sdk import SystemNode, Graph, DependencyEdge
+from scp_servicenow.mapper import (
+    map_node_to_ci,
+    validate_mapping,
+    DEFAULT_TIER_TO_CRITICALITY,
+    IssueSeverity,
+)
 from scp_servicenow.config import CMDBConfig
+from unittest.mock import MagicMock
 
 
 class TestMapNodeToCi:
@@ -101,31 +107,144 @@ class TestMapNodeToCi:
 class TestValidateMapping:
     """Tests for validate_mapping function."""
 
-    def test_valid_graph(self):
+    def test_valid_graph_no_issues(self):
         """Test validation passes for valid graph."""
-        # Using Graph directly is easier if we can mock or construct it properly
-        # Since Graph validates internally, we can't create invalid structure easily via SDK
-        # But we can create a graph with valid systems but missing names if we bypass validation or if partial models allow it
-        pass  # Graph validation is handled by SDK mainly, mapper validation checks business logic
+        # Create mock graph with valid systems
+        graph = MagicMock(spec=Graph)
 
-        # Let's verify business logic validation
-        # Create a graph with two systems and a dependency
-        # We need to construct a Graph object.
-        # Assuming we can instantiate Graph or create it from minimal data
+        node_a = SystemNode(urn="urn:scp:test:service-a", name="Service A", tier=1)
+        node_b = SystemNode(urn="urn:scp:test:service-b", name="Service B", tier=2)
 
-        # NOTE: Since constructing Graph programmatically with specific (invalid) constraints might be hard if SDK enforces validity,
-        # we might need to rely on mocking or skip invalid graph structure tests if they are impossible to represent in SDK.
-        # But missing "name" is possible in SystemNode? Optional?
+        graph.systems.return_value = [node_a, node_b]
 
-        # node_a = SystemNode(urn="urn:scp:test:service-a", name="Service A", tier=1)
-        # node_b = SystemNode(urn="urn:scp:test:service-b", name="Service B", tier=2)
+        edge = DependencyEdge(
+            from_urn="urn:scp:test:service-a", to_urn="urn:scp:test:service-b"
+        )
+        graph.dependencies.return_value = [edge]
 
-        # Creating a graph instance - assuming Graph() constructor works or similar
-        # If Graph doesn't expose mutable add methods easily, we might need a workaround.
-        # SDK Graph usually loads from file.
-        # Let's try to mock Graph or use a builder if available.
-        # For now, I'll assume we can mock the behavior or iteration.
-        pass
+        # Mock find_system to return nodes when they exist
+        def mock_find_system(urn):
+            if urn == "urn:scp:test:service-a":
+                return node_a
+            elif urn == "urn:scp:test:service-b":
+                return node_b
+            return None
 
-    # Skipped complex Graph validation tests for now as constructing graph objects manually
-    # might require more SDK knowledge. Will rely on mocked Graph in test_cli.py or simple checks.
+        graph.find_system.side_effect = mock_find_system
+
+        issues = validate_mapping(graph)
+
+        assert len(issues) == 0
+
+    def test_missing_name_error(self):
+        """Test validation catches missing name."""
+        graph = MagicMock(spec=Graph)
+
+        # Create node with no name (empty string)
+        node = SystemNode(urn="urn:scp:test:no-name", name="")
+
+        graph.systems.return_value = [node]
+        graph.dependencies.return_value = []
+
+        issues = validate_mapping(graph)
+
+        assert len(issues) == 1
+        assert issues[0]["severity"] == IssueSeverity.ERROR
+        assert "name" in issues[0]["message"].lower()
+        assert issues[0]["node_id"] == "urn:scp:test:no-name"
+
+    def test_invalid_tier_warning(self):
+        """Test validation warns about invalid tier."""
+        graph = MagicMock(spec=Graph)
+
+        # Create node with invalid tier
+        node = SystemNode(urn="urn:scp:test:bad-tier", name="Bad Tier", tier=99)
+
+        graph.systems.return_value = [node]
+        graph.dependencies.return_value = []
+
+        issues = validate_mapping(graph)
+
+        assert len(issues) == 1
+        assert issues[0]["severity"] == IssueSeverity.WARNING
+        assert "tier" in issues[0]["message"].lower()
+        assert "99" in issues[0]["message"]
+
+    def test_missing_dependency_source_error(self):
+        """Test validation catches missing dependency source."""
+        graph = MagicMock(spec=Graph)
+
+        node_b = SystemNode(urn="urn:scp:test:service-b", name="Service B")
+
+        graph.systems.return_value = [node_b]
+
+        edge = DependencyEdge(
+            from_urn="urn:scp:test:service-a", to_urn="urn:scp:test:service-b"
+        )
+        graph.dependencies.return_value = [edge]
+
+        # Mock find_system - only service-b exists
+        def mock_find_system(urn):
+            if urn == "urn:scp:test:service-b":
+                return node_b
+            return None
+
+        graph.find_system.side_effect = mock_find_system
+
+        issues = validate_mapping(graph)
+
+        # Should have error for missing source
+        errors = [i for i in issues if i["severity"] == IssueSeverity.ERROR]
+        assert len(errors) == 1
+        assert "service-a" in errors[0]["message"]
+        assert "not found" in errors[0]["message"].lower()
+
+    def test_missing_dependency_target_warning(self):
+        """Test validation warns about missing external dependency target."""
+        graph = MagicMock(spec=Graph)
+
+        node_a = SystemNode(urn="urn:scp:test:service-a", name="Service A")
+
+        graph.systems.return_value = [node_a]
+
+        edge = DependencyEdge(
+            from_urn="urn:scp:test:service-a", to_urn="urn:scp:test:external"
+        )
+        graph.dependencies.return_value = [edge]
+
+        # Mock find_system - only service-a exists
+        def mock_find_system(urn):
+            if urn == "urn:scp:test:service-a":
+                return node_a
+            return None
+
+        graph.find_system.side_effect = mock_find_system
+
+        issues = validate_mapping(graph)
+
+        # Should have warning for missing target (might be external)
+        warnings = [i for i in issues if i["severity"] == IssueSeverity.WARNING]
+        assert len(warnings) == 1
+        assert "external" in warnings[0]["message"]
+        assert "might be external" in warnings[0]["message"].lower()
+
+    def test_multiple_issues(self):
+        """Test validation catches multiple issues."""
+        graph = MagicMock(spec=Graph)
+
+        # Node with no name
+        node_a = SystemNode(urn="urn:scp:test:no-name", name="")
+        # Node with invalid tier
+        node_b = SystemNode(urn="urn:scp:test:bad-tier", name="Bad Tier", tier=999)
+
+        graph.systems.return_value = [node_a, node_b]
+        graph.dependencies.return_value = []
+
+        issues = validate_mapping(graph)
+
+        assert len(issues) == 2
+        errors = [i for i in issues if i["severity"] == IssueSeverity.ERROR]
+        warnings = [i for i in issues if i["severity"] == IssueSeverity.WARNING]
+
+        assert len(errors) == 1  # Missing name
+        assert len(warnings) == 1  # Invalid tier

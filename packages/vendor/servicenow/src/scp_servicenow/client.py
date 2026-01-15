@@ -5,6 +5,9 @@ import httpx
 from pydantic import BaseModel
 
 
+__all__ = ["ServiceNowAuth", "ServiceNowClient"]
+
+
 class ServiceNowAuth(BaseModel):
     """ServiceNow authentication configuration."""
 
@@ -54,6 +57,9 @@ class ServiceNowClient:
         # Prepare auth for httpx
         self._httpx_auth = auth.get_auth()
         self._headers = auth.get_headers()
+
+        # Cache for relationship type sys_id to avoid repeated lookups
+        self._rel_type_cache: dict[str, str] = {}
 
     def _request(
         self,
@@ -161,18 +167,24 @@ class ServiceNowClient:
         if type_sys_id:
             rel_data["type"] = type_sys_id
         else:
-            # Get "Depends on::Used by" relationship type
-            # Query for the relationship type
-            type_query = {
-                "sysparm_query": "parent_descriptor=Depends on^child_descriptor=Used by",
-                "sysparm_limit": 1,
-            }
-            type_result = self._request(
-                "GET", "/api/now/table/cmdb_rel_type", params=type_query
-            )
+            # Get "Depends on::Used by" relationship type (with caching)
+            cache_key = "Depends on::Used by"
+            if cache_key in self._rel_type_cache:
+                rel_data["type"] = self._rel_type_cache[cache_key]
+            else:
+                # Query for the relationship type
+                type_query = {
+                    "sysparm_query": "parent_descriptor=Depends on^child_descriptor=Used by",
+                    "sysparm_limit": 1,
+                }
+                type_result = self._request(
+                    "GET", "/api/now/table/cmdb_rel_type", params=type_query
+                )
 
-            if type_result.get("result"):
-                rel_data["type"] = type_result["result"][0]["sys_id"]
+                if type_result.get("result"):
+                    type_sys_id = type_result["result"][0]["sys_id"]
+                    self._rel_type_cache[cache_key] = type_sys_id
+                    rel_data["type"] = type_sys_id
 
         result = self._request("POST", "/api/now/table/cmdb_rel_ci", json=rel_data)
         return result.get("result", {})

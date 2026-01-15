@@ -10,7 +10,7 @@ from rich.console import Console
 from scp_sdk import Graph
 
 from .client import ServiceNowAuth, ServiceNowClient
-from .mapper import validate_mapping
+from .mapper import validate_mapping, IssueSeverity
 from .sync import sync_to_servicenow, print_sync_results
 from .config import CMDBConfig
 
@@ -225,8 +225,8 @@ def validate(
         return
 
     # Group by severity
-    errors = [i for i in issues if i.get("severity") == "error"]
-    warnings = [i for i in issues if i.get("severity") == "warning"]
+    errors = [i for i in issues if i.get("severity") == IssueSeverity.ERROR]
+    warnings = [i for i in issues if i.get("severity") == IssueSeverity.WARNING]
 
     if errors:
         console.print(f"[red]✗ {len(errors)} error(s) found:[/red]")

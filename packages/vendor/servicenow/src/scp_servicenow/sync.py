@@ -11,6 +11,9 @@ from .mapper import map_node_to_ci
 from .config import CMDBConfig
 
 
+__all__ = ["sync_to_servicenow", "print_sync_results", "SyncResult"]
+
+
 console = Console()
 
 
