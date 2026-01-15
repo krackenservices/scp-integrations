@@ -5,7 +5,7 @@ Sync SCP unified model JSON to ServiceNow Configuration Management Database (CMD
 ## Installation
 
 ```bash
-cd packages/vendor/servicenow-cmdb
+cd packages/vendor/servicenow
 uv sync
 ```
 
@@ -241,7 +241,7 @@ cd packages/constructor
 uv run scp-cli scan /path/to/repos --export json -o /tmp/graph.json
 
 # 2. (Optional) Generate config template
-cd ../vendor/servicenow-cmdb
+cd ../vendor/servicenow
 uv run scp-servicenow cmdb init
 
 # 3. (Optional) Edit config to use custom fields
