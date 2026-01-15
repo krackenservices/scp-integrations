@@ -1,9 +1,8 @@
 """Sync orchestration for SCP to ServiceNow CMDB."""
 
-import json
 from typing import Any
-from pathlib import Path
 
+from scp_sdk import Graph
 from rich.console import Console
 from rich.table import Table
 
@@ -31,21 +30,8 @@ class SyncResult(dict):
         self.failed = []
 
 
-def load_graph_json(path: str | Path) -> dict[str, Any]:
-    """Load SCP unified JSON graph from file.
-
-    Args:
-        path: Path to JSON file
-
-    Returns:
-        Graph data dictionary
-    """
-    with open(path, "r") as f:
-        return json.load(f)
-
-
 def sync_to_servicenow(
-    graph_data: dict[str, Any],
+    graph: Graph,
     client: ServiceNowClient,
     ci_class: str = "cmdb_ci_service_discovered",
     dry_run: bool = False,
@@ -54,7 +40,7 @@ def sync_to_servicenow(
     """Sync SCP graph to ServiceNow CMDB.
 
     Args:
-        graph_data: SCP unified JSON graph
+        graph: SCP unified graph
         client: ServiceNow API client
         ci_class: CI class to create (default: cmdb_ci_service_discovered)
         dry_run: If True, validate but don't make changes
@@ -65,11 +51,9 @@ def sync_to_servicenow(
     """
     result = SyncResult()
 
-    nodes = graph_data.get("nodes", [])
-    edges = graph_data.get("edges", [])
+    result = SyncResult()
 
-    # Filter to System nodes only
-    system_nodes = [n for n in nodes if n.get("type") == "System"]
+    system_nodes = list(graph.systems())
 
     console.print(
         f"\n[bold]Syncing {len(system_nodes)} systems to ServiceNow...[/bold]"
@@ -84,8 +68,8 @@ def sync_to_servicenow(
     # Step 1: Upsert CIs
     with console.status("[bold green]Syncing CIs...") as status:
         for i, node in enumerate(system_nodes, 1):
-            node_id = node.get("id", "")
-            node_name = node.get("name", "Unknown")
+            node_id = node.urn
+            node_name = node.name or "Unknown"
 
             status.update(
                 f"[bold green]Syncing CI {i}/{len(system_nodes)}: {node_name}"
@@ -132,7 +116,7 @@ def sync_to_servicenow(
                 )
 
     # Step 2: Sync relationships
-    dependency_edges = [e for e in edges if e.get("type") == "DEPENDS_ON"]
+    dependency_edges = list(graph.dependencies())
 
     if dependency_edges:
         console.print(
@@ -141,8 +125,8 @@ def sync_to_servicenow(
 
         with console.status("[bold green]Syncing relationships...") as status:
             for i, edge in enumerate(dependency_edges, 1):
-                from_id = edge.get("from", "")
-                to_id = edge.get("to", "")
+                from_id = edge.from_urn
+                to_id = edge.to_urn
 
                 status.update(
                     f"[bold green]Syncing relationship {i}/{len(dependency_edges)}"

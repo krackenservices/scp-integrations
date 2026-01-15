@@ -7,6 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "pytest",
     "scp-constructor",
+    "scp-servicenow",
 ]
 
 [project.scripts]
@@ -18,3 +19,4 @@ exclude = ["packages/vendor"]
 
 [tool.uv.sources]
 scp-constructor = { workspace = true }
+scp-servicenow = { workspace = true }

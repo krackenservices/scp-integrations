@@ -7,9 +7,11 @@ from typing import Optional
 import typer
 from rich.console import Console
 
+from scp_sdk import Graph
+
 from .client import ServiceNowAuth, ServiceNowClient
 from .mapper import validate_mapping
-from .sync import load_graph_json, sync_to_servicenow, print_sync_results
+from .sync import sync_to_servicenow, print_sync_results
 from .config import CMDBConfig
 
 
@@ -76,9 +78,9 @@ def sync(
         raise typer.Exit(1)
 
     try:
-        graph_data = load_graph_json(graph_file)
+        graph = Graph.from_file(graph_file)
     except Exception as e:
-        console.print(f"[red]Error loading JSON: {e}[/red]")
+        console.print(f"[red]Error loading graph: {e}[/red]")
         raise typer.Exit(1)
 
     # Load configuration
@@ -106,21 +108,15 @@ def sync(
 
     console.print(f"[bold]ServiceNow Instance:[/bold] {auth.instance_url}")
     console.print(f"[bold]CI Class:[/bold] {ci_class}")
-    console.print(
-        f"[bold]Systems:[/bold] {len([n for n in graph_data.get('nodes', []) if n.get('type') == 'System'])}"
-    )
-    console.print(
-        f"[bold]Dependencies:[/bold] {len([e for e in graph_data.get('edges', []) if e.get('type') == 'DEPENDS_ON'])}"
-    )
+    console.print(f"[bold]Systems:[/bold] {len(graph)}")
+    console.print(f"[bold]Dependencies:[/bold] {len(list(graph.dependencies()))}")
 
     # Create client
     client = ServiceNowClient(auth)
 
     # Sync
     try:
-        result = sync_to_servicenow(
-            graph_data, client, ci_class, dry_run, config=config
-        )
+        result = sync_to_servicenow(graph, client, ci_class, dry_run, config=config)
         print_sync_results(result, dry_run)
 
         if result.failed:
@@ -214,15 +210,15 @@ def validate(
         raise typer.Exit(1)
 
     try:
-        graph_data = load_graph_json(graph_file)
+        graph = Graph.from_file(graph_file)
     except Exception as e:
-        console.print(f"[red]Error loading JSON: {e}[/red]")
+        console.print(f"[red]Error loading graph: {e}[/red]")
         raise typer.Exit(1)
 
     # Validate
     console.print(f"[bold]Validating {graph_file}...[/bold]\n")
 
-    issues = validate_mapping(graph_data)
+    issues = validate_mapping(graph)
 
     if not issues:
         console.print("[green]✓ Validation passed - no issues found[/green]")

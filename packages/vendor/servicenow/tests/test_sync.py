@@ -1,46 +1,46 @@
 """Tests for the sync module."""
 
-import json
+from unittest.mock import MagicMock
 
 import pytest
 from pytest_httpx import HTTPXMock
+from scp_sdk import SystemNode, DependencyEdge
 
 from scp_servicenow.client import ServiceNowAuth, ServiceNowClient
-from scp_servicenow.sync import load_graph_json, sync_to_servicenow
+from scp_servicenow.sync import sync_to_servicenow
 
 
 @pytest.fixture
-def sample_graph_file(tmp_path):
-    """Create a sample graph JSON file."""
-    graph_data = {
-        "nodes": [
-            {
-                "id": "urn:scp:test:service-a",
-                "type": "System",
-                "name": "Service A",
-                "tier": 1,
-                "domain": "core",
-                "team": "platform",
-            },
-            {
-                "id": "urn:scp:test:service-b",
-                "type": "System",
-                "name": "Service B",
-                "tier": 2,
-            },
-        ],
-        "edges": [
-            {
-                "from": "urn:scp:test:service-a",
-                "to": "urn:scp:test:service-b",
-                "type": "DEPENDS_ON",
-            }
-        ],
-    }
+def mock_graph():
+    """Create a mock Graph object."""
+    graph = MagicMock()
 
-    graph_file = tmp_path / "test_graph.json"
-    graph_file.write_text(json.dumps(graph_data))
-    return graph_file
+    node_a = SystemNode(
+        urn="urn:scp:test:service-a",
+        name="Service A",
+        tier=1,
+        domain="core",
+        team="platform",
+    )
+    node_b = SystemNode(
+        urn="urn:scp:test:service-b",
+        name="Service B",
+        tier=2,
+    )
+
+    edge = DependencyEdge(
+        from_urn="urn:scp:test:service-a",
+        to_urn="urn:scp:test:service-b",
+        type="DEPENDS_ON",
+    )
+
+    graph.systems.return_value = [node_a, node_b]
+    graph.dependencies.return_value = [edge]
+
+    # Also support len() if used in CLI
+    graph.__len__.return_value = 2
+
+    return graph
 
 
 @pytest.fixture
@@ -53,45 +53,21 @@ def mock_auth():
     )
 
 
-class TestLoadGraphJson:
-    """Tests for load_graph_json function."""
-
-    def test_load_valid_json(self, sample_graph_file):
-        """Test loading valid JSON file."""
-        graph_data = load_graph_json(sample_graph_file)
-
-        assert "nodes" in graph_data
-        assert "edges" in graph_data
-        assert len(graph_data["nodes"]) == 2
-        assert len(graph_data["edges"]) == 1
-
-    def test_load_missing_file(self, tmp_path):
-        """Test loading missing file raises error."""
-        missing_file = tmp_path / "missing.json"
-
-        with pytest.raises(FileNotFoundError):
-            load_graph_json(missing_file)
-
-
 class TestSyncToServiceNow:
     """Tests for sync_to_servicenow function."""
 
-    def test_dry_run_mode(self, sample_graph_file, mock_auth, httpx_mock: HTTPXMock):
+    def test_dry_run_mode(self, mock_graph, mock_auth, httpx_mock: HTTPXMock):
         """Test dry run mode doesn't make API calls."""
-        graph_data = load_graph_json(sample_graph_file)
         client = ServiceNowClient(mock_auth)
 
         # Dry run should not make any HTTP requests
-        result = sync_to_servicenow(graph_data, client, dry_run=True)
+        result = sync_to_servicenow(mock_graph, client, dry_run=True)
 
         assert len(result.created_cis) == 0  # Dry run doesn't track creates
         assert len(result.failed) == 0
 
-    def test_sync_creates_cis(
-        self, sample_graph_file, mock_auth, httpx_mock: HTTPXMock
-    ):
+    def test_sync_creates_cis(self, mock_graph, mock_auth, httpx_mock: HTTPXMock):
         """Test sync creates CIs."""
-        graph_data = load_graph_json(sample_graph_file)
         client = ServiceNowClient(mock_auth)
 
         # Mock API responses for CI upserts
@@ -157,7 +133,7 @@ class TestSyncToServiceNow:
             },
         )
 
-        result = sync_to_servicenow(graph_data, client, dry_run=False)
+        result = sync_to_servicenow(mock_graph, client, dry_run=False)
 
         assert len(result.created_cis) == 2
         assert len(result.created_relationships) == 1
@@ -165,16 +141,14 @@ class TestSyncToServiceNow:
 
     def test_sync_handles_existing_ci(self, mock_auth, httpx_mock: HTTPXMock):
         """Test sync updates existing CI."""
-        graph_data = {
-            "nodes": [
-                {
-                    "id": "urn:scp:test:existing",
-                    "type": "System",
-                    "name": "Existing Service",
-                }
-            ],
-            "edges": [],
-        }
+        # Create a simpler graph for this test
+        graph = MagicMock()
+        node = SystemNode(
+            urn="urn:scp:test:existing",
+            name="Existing Service",
+        )
+        graph.systems.return_value = [node]
+        graph.dependencies.return_value = []
 
         client = ServiceNowClient(mock_auth)
 
@@ -204,7 +178,7 @@ class TestSyncToServiceNow:
             },
         )
 
-        result = sync_to_servicenow(graph_data, client, dry_run=False)
+        result = sync_to_servicenow(graph, client, dry_run=False)
 
         assert len(result.created_cis) == 1  # Updated CI counted as created
         assert len(result.failed) == 0
