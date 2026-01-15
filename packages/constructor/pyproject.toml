@@ -28,6 +28,3 @@ dev = [
     "pytest-cov>=7.0.0",
     "ruff>=0.14.9",
 ]
-
-[tool.uv.sources]
-scp-sdk = { git = "https://github.com/krackenservices/scp-sdk.git", tag = "v0.1.0" }
