@@ -1,5 +1,4 @@
-"""CLI for SCP Constructor - SDK-powered rewrite.
-
+"""
 This version uses scp_sdk for manifest loading and graph operations,
 dramatically reducing code while maintaining identical functionality.
 """
@@ -388,7 +387,7 @@ def transform(
 @app.command()
 def version():
     """Show version information."""
-    console.print(f"scp-constructor v{__version__} (SDK-powered)")
+    console.print(f"scp-constructor v{__version__}")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 [project]
 name = "scp-constructor"
 version = "0.3.0"
-description = "Build architecture graphs from scp.yaml files - SDK-powered rewrite"
+description = "Build architecture models from scp.yaml files"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
