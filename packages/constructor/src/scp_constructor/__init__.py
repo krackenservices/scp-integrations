@@ -1,3 +1,3 @@
-"""SCP Constructor - Build architecture graphs from scp.yaml files."""
+"""Build architecture graphs from scp.yaml files."""
 
-__version__ = "0.1.0"
+__version__ = "0.3.0"
