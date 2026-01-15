@@ -623,7 +623,7 @@ dependencies = [
 requires-dist = [
     { name = "pytest" },
     { name = "scp-constructor", editable = "packages/constructor" },
-    { name = "scp-servicenow", editable = "packages/vendor/servicenow-cmdb" },
+    { name = "scp-servicenow", editable = "packages/vendor/servicenow" },
 ]
 
 [[package]]
@@ -646,7 +646,7 @@ wheels = [
 [[package]]
 name = "scp-servicenow"
 version = "0.1.0"
-source = { editable = "packages/vendor/servicenow-cmdb" }
+source = { editable = "packages/vendor/servicenow" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic" },

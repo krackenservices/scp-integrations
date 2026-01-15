@@ -99,11 +99,22 @@ def map_node_to_ci(
 def validate_mapping(graph: Graph) -> list[dict[str, Any]]:
     """Validate SCP graph can be mapped to ServiceNow.
 
+    Checks for common issues that might prevent successful mapping:
+    - Systems missing required 'name' field
+    - Invalid tier values (must be 1-5)
+    - Dependencies with missing source or target systems
+
     Args:
-        graph: SCP unified graph
+        graph: SCP unified graph to validate
 
     Returns:
-        List of validation warnings/errors
+        List of validation issues. Each issue is a dict with:
+            - severity: IssueSeverity.ERROR | IssueSeverity.WARNING
+            - node_id: str (URN of the problematic node)
+            - edge: DependencyEdge (for dependency issues)
+            - message: str (human-readable description)
+
+        Returns empty list if no issues found.
     """
     issues: list[dict[str, Any]] = []
 

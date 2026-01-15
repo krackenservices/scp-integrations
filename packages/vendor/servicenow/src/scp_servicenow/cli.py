@@ -54,7 +54,7 @@ def sync(
     instance: Optional[str] = typer.Option(
         None, "--instance", "-i", help="ServiceNow instance URL (overrides env var)"
     ),
-    ci_class: str = typer.Option(
+    servicenow_ci_class: str = typer.Option(
         "cmdb_ci_service_discovered",
         "--ci-class",
         "-c",
@@ -79,6 +79,12 @@ def sync(
 
     try:
         graph = Graph.from_file(graph_file)
+    except FileNotFoundError:
+        console.print(f"[red]Error: File not found: {graph_file}[/red]")
+        raise typer.Exit(1)
+    except ValueError as e:
+        console.print(f"[red]Error: Invalid graph format: {e}[/red]")
+        raise typer.Exit(1)
     except Exception as e:
         console.print(f"[red]Error loading graph: {e}[/red]")
         raise typer.Exit(1)
@@ -107,7 +113,7 @@ def sync(
         raise typer.Exit(1)
 
     console.print(f"[bold]ServiceNow Instance:[/bold] {auth.instance_url}")
-    console.print(f"[bold]CI Class:[/bold] {ci_class}")
+    console.print(f"[bold]CI Class:[/bold] {servicenow_ci_class}")
     console.print(f"[bold]Systems:[/bold] {len(graph)}")
     console.print(f"[bold]Dependencies:[/bold] {len(list(graph.dependencies()))}")
 
@@ -116,7 +122,9 @@ def sync(
 
     # Sync
     try:
-        result = sync_to_servicenow(graph, client, ci_class, dry_run, config=config)
+        result = sync_to_servicenow(
+            graph, client, servicenow_ci_class, dry_run, config=config
+        )
         print_sync_results(result, dry_run)
 
         if result.failed:
@@ -211,6 +219,12 @@ def validate(
 
     try:
         graph = Graph.from_file(graph_file)
+    except FileNotFoundError:
+        console.print(f"[red]Error: File not found: {graph_file}[/red]")
+        raise typer.Exit(1)
+    except ValueError as e:
+        console.print(f"[red]Error: Invalid graph format: {e}[/red]")
+        raise typer.Exit(1)
     except Exception as e:
         console.print(f"[red]Error loading graph: {e}[/red]")
         raise typer.Exit(1)
