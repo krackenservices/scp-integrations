@@ -1,0 +1,138 @@
+name: Constructor Workflow
+
+on:
+  workflow_call:
+
+jobs:
+  build-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/constructor
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        working-directory: .
+        run: uv sync --all-groups
+
+      - name: Lint (Ruff)
+        run: uv run ruff check .
+
+      - name: Run tests
+        run: uv run pytest
+
+      - name: Sync Project Version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/constructor-v* ]]; then
+            VERSION=${GITHUB_REF_NAME#constructor-v}
+            echo "Type: Tagged Release"
+          else
+            LAST_TAG=$(git tag -l 'constructor-v*' --sort=-v:refname | head -n1)
+            if [ -z "$LAST_TAG" ]; then
+              LAST_TAG="constructor-v0.0.0"
+            fi
+            VERSION="${LAST_TAG#constructor-v}-dev"
+            echo "Type: Dev Build (Last tag: $LAST_TAG)"
+          fi
+
+          echo "Syncing pyproject.toml to version: $VERSION"
+          uv version "$VERSION"
+          uv version
+
+      - name: Build package
+        working-directory: .
+        run: uv build --package scp-constructor
+
+      - name: Upload Build Artifact
+        if: startsWith(github.ref, 'refs/tags/constructor-v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: constructor-dist
+          path: dist/*
+          retention-days: 1
+
+  docker-build:
+    name: Docker Build
+    needs: build-test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/constructor
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        if: startsWith(github.ref, 'refs/tags/constructor-v')
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/scp-constructor
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}},prefix=constructor-v
+            type=semver,pattern={{major}}.{{minor}},prefix=constructor-v
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: packages/constructor
+          push: ${{ startsWith(github.ref, 'refs/tags/constructor-v') }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  publish:
+    name: Publish
+    needs: build-test
+    if: startsWith(github.ref, 'refs/tags/constructor-v')
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: constructor-dist
+          path: dist/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/

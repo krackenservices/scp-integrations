@@ -33,6 +33,12 @@ def export_json(manifests: list[SCPManifest]) -> dict[str, Any]:
             if manifest.system.classification
             else None,
             "team": manifest.ownership.team if manifest.ownership else None,
+            "contacts": [
+                {"type": c.type, "ref": c.ref} for c in manifest.ownership.contacts
+            ]
+            if manifest.ownership and manifest.ownership.contacts
+            else [],
+            "escalation": manifest.ownership.escalation if manifest.ownership else [],
         }
 
         # Add dependency edges (create stub only if not already known)
@@ -387,7 +393,18 @@ def import_json(data: dict[str, Any]) -> list[SCPManifest]:
         # Build ownership
         ownership = None
         if node.get("team"):
-            ownership = Ownership(team=node["team"])
+            from .models import Contact
+
+            contacts = []
+            if node.get("contacts"):
+                for c in node["contacts"]:
+                    contacts.append(Contact(type=c["type"], ref=c["ref"]))
+
+            ownership = Ownership(
+                team=node["team"],
+                contacts=contacts if contacts else None,
+                escalation=node.get("escalation"),
+            )
 
         # Build capabilities
         provides = []

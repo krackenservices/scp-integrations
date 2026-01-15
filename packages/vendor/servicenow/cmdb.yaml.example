@@ -1,0 +1,51 @@
+# ServiceNow CMDB Integration Configuration
+
+# Field Mappings: Define how SCP fields map to ServiceNow CI fields
+# This allows customization without code changes
+field_mappings:
+  # Standard field mappings (these fields exist in base ServiceNow)
+  name: name
+  business_criticality: tier # Maps SCP tier (1-5) to ServiceNow criticality
+
+  # Optional: Uncomment if your instance has these custom fields
+  # u_business_domain: domain
+  # u_support_team: team
+
+  # Use comments field to store additional metadata
+  comments:
+    - contacts
+    - escalation
+    - team
+    - domain
+
+# Tier to Criticality mapping
+tier_mappings:
+  1: "1 - Critical"
+  2: "2 - High"
+  3: "3 - Medium"
+  4: "4 - Low"
+  5: "5 - Planning"
+
+# Contact resolution
+contact_resolution:
+  # Try to resolve email contacts to owned_by field
+  resolve_email_to_owned_by: true
+
+  # Fallback behavior if user not found
+  email_not_found: "warn" # Options: "warn", "ignore", "error"
+
+# CI Class to use in ServiceNow
+ci_class: "cmdb_ci_service_discovered"
+
+# Comments template - format for the comments field
+# Available placeholders: {team}, {domain}, {contacts}, {escalation}
+comments_template: |
+  SCP Metadata:
+  Team: {team}
+  Domain: {domain}
+
+  Contacts:
+  {contacts}
+
+  Escalation Chain:
+  {escalation}
