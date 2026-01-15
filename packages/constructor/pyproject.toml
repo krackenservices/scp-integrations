@@ -1,16 +1,15 @@
 [project]
 name = "scp-constructor"
-version = "0.1.0"
-description = "Scan repositories for scp.yaml files and build architecture graphs"
+version = "0.3.0"
+description = "Build architecture graphs from scp.yaml files - SDK-powered rewrite"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "pydantic>=2.0",
-    "pyyaml>=6.0",
-    "neo4j>=5.0",
-    "httpx>=0.25",
+    "scp-sdk>=0.1.0",
     "typer>=0.9",
     "rich>=13.0",
+    "neo4j>=5.0",
+    "httpx>=0.25",
 ]
 
 [project.scripts]
@@ -29,3 +28,6 @@ dev = [
     "pytest-cov>=7.0.0",
     "ruff>=0.14.9",
 ]
+
+[tool.uv.sources]
+scp-sdk = { path = "../../../scp-sdk", editable = true }

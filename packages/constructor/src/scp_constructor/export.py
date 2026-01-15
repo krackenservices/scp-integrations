@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from .models import SCPManifest
+from scp_sdk.core.models import SCPManifest
 
 
 def export_json(manifests: list[SCPManifest]) -> dict[str, Any]:
@@ -345,7 +345,7 @@ def import_json(data: dict[str, Any]) -> list[SCPManifest]:
     Returns:
         List of reconstructed SCP manifests
     """
-    from .models import (
+    from scp_sdk.core.models import (
         System,
         Classification,
         Ownership,

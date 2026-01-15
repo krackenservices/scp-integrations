@@ -1,3 +1,6 @@
-"""SCP Constructor - Build architecture graphs from scp.yaml files."""
+"""SCP Constructor - SDK-powered rewrite.
 
-__version__ = "0.1.0"
+Build architecture graphs from scp.yaml files using the SCP SDK.
+"""
+
+__version__ = "0.3.0"
