@@ -30,4 +30,4 @@ dev = [
 ]
 
 [tool.uv.sources]
-scp-sdk = { path = "../../../scp-sdk", editable = true }
+scp-sdk = { git = "https://github.com/krackenservices/scp-sdk.git", tag = "v0.1.0" }
