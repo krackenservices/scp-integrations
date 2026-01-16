@@ -91,7 +91,7 @@ jobs:
 
   constructor-docker-build:
     name: Docker Build
-    needs: build-test
+    needs: constructor-build-test
     if: ${{ needs.changes.outputs.constructor == 'true' }}
     runs-on: ubuntu-latest
     defaults:
