@@ -29,7 +29,7 @@ jobs:
               - 'packages/vendor/servicenow/**'
 
   constructor-build-test:
-    name: Build & Test
+    name: Build & Test Constructor
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -90,7 +90,7 @@ jobs:
           retention-days: 1
 
   constructor-docker-build:
-    name: Docker Build
+    name: Docker Build Constructor
     needs: constructor-build-test
     if: ${{ needs.changes.outputs.constructor == 'true' }}
     runs-on: ubuntu-latest
@@ -135,7 +135,7 @@ jobs:
           cache-to: type=gha,mode=max
 
   constructor-publish:
-    name: Publish
+    name: Publish Constructor
     needs: constructor-build-test
     if: startsWith(github.ref, 'refs/tags/constructor-v')
     runs-on: ubuntu-latest
@@ -163,7 +163,7 @@ jobs:
           packages-dir: dist/
 
   servicenow-build-test:
-    name: Build & Test
+    name: Build & Test ServiceNow
     runs-on: ubuntu-latest
     if: ${{ needs.changes.outputs.servicenow == 'true' }}
     defaults:
@@ -225,7 +225,7 @@ jobs:
           retention-days: 1
 
   servicenow-publish:
-    name: Publish
+    name: Publish ServiceNow
     needs: servicenow-build-test
     if: startsWith(github.ref, 'refs/tags/servicenow-v')
     runs-on: ubuntu-latest
