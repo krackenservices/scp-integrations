@@ -17,6 +17,7 @@ jobs:
     outputs:
       constructor: ${{ steps.filter.outputs.constructor }}
       servicenow: ${{ steps.filter.outputs.servicenow }}
+      workflows: ${{ steps.filter.outputs.workflows }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -27,11 +28,13 @@ jobs:
               - 'packages/constructor/**'
             servicenow:
               - 'packages/vendor/servicenow/**'
+            workflows:
+              - '.github/workflows/**'
 
   constructor-build-test:
     name: Build & Test Constructor
     needs: changes
-    if: ${{ needs.changes.outputs.constructor == 'true' }}
+    if: ${{ needs.changes.outputs.constructor == 'true' || needs.changes.outputs.workflows == 'true' || startsWith(github.ref, 'refs/tags/constructor-v') }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -93,8 +96,8 @@ jobs:
 
   constructor-docker-build:
     name: Docker Build Constructor
-    needs: constructor-build-test
-    if: ${{ needs.changes.outputs.constructor == 'true' }}
+    needs: [constructor-build-test, changes]
+    if: ${{ needs.changes.outputs.constructor == 'true' || needs.changes.outputs.workflows == 'true' || startsWith(github.ref, 'refs/tags/constructor-v') }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -167,7 +170,7 @@ jobs:
   servicenow-build-test:
     name: Build & Test ServiceNow
     needs: changes
-    if: ${{ needs.changes.outputs.servicenow == 'true' }}
+    if: ${{ needs.changes.outputs.servicenow == 'true' || needs.changes.outputs.workflows == 'true' || startsWith(github.ref, 'refs/tags/servicenow-v') }}
     runs-on: ubuntu-latest
     defaults:
       run:
