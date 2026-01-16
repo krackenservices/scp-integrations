@@ -1,17 +1,22 @@
-"""Tests for the export module."""
+"""Tests for export functions."""
 
 import pytest
 
-from scp_constructor.models import (
+from scp_sdk import (
     SCPManifest,
     System,
     Classification,
+    Ownership,
     Capability,
     Dependency,
-    Ownership,
     SecurityExtension,
 )
-from scp_constructor.export import export_json, export_mermaid, export_openc2, import_json
+from scp_constructor.export import (
+    export_json,
+    export_mermaid,
+    export_openc2,
+    import_json,
+)
 
 
 @pytest.fixture
@@ -161,15 +166,15 @@ class TestExportMermaid:
         result = export_mermaid(sample_manifests)
 
         # Tier 1 should have double brackets and red indicator
-        assert '[[' in result
-        assert '🔴' in result
+        assert "[[" in result
+        assert "🔴" in result
 
     def test_export_tier2_styling(self, sample_manifests):
         """Test tier 2 systems get different styling."""
         result = export_mermaid(sample_manifests)
 
         # Tier 2 should have yellow indicator
-        assert '🟡' in result
+        assert "🟡" in result
 
     def test_export_dependency_edge(self, sample_manifests):
         """Test dependency edges are rendered."""
@@ -221,7 +226,9 @@ class TestExportOpenc2:
         """Test actuator has correct values."""
         result = export_openc2([security_manifest])
 
-        containment = next(a for a in result["actuators"] if a["capability"] == "host-containment")
+        containment = next(
+            a for a in result["actuators"] if a["capability"] == "host-containment"
+        )
         assert containment["actuator_id"] == "urn:scp:crowdstrike:falcon"
         assert containment["name"] == "CrowdStrike Falcon"
         assert containment["profile"] == "edr"
@@ -242,7 +249,7 @@ class TestImportJson:
 
     def test_import_reconstructs_manifests(self, sample_manifests):
         """Test import reconstructs manifest list.
-        
+
         Note: import_json only reconstructs systems that were fully defined,
         not stub nodes created from dependency references.
         """
@@ -267,7 +274,9 @@ class TestImportJson:
         json_data = export_json(sample_manifests)
         imported = import_json(json_data)
 
-        order = next(m for m in imported if m.system.urn == "urn:scp:test:order-service")
+        order = next(
+            m for m in imported if m.system.urn == "urn:scp:test:order-service"
+        )
         assert order.system.classification.tier == 1
         assert order.system.classification.domain == "ordering"
 
@@ -280,7 +289,9 @@ class TestImportJson:
         manifest = imported[0]
 
         # Check security extension is preserved
-        containment = next(c for c in manifest.provides if c.capability == "host-containment")
+        containment = next(
+            c for c in manifest.provides if c.capability == "host-containment"
+        )
         assert containment.x_security is not None
         assert containment.x_security.actuator_profile == "edr"
         assert containment.x_security.actions == ["contain", "allow", "query"]
@@ -299,9 +310,10 @@ class TestImportJson:
         assert direct_openc2["count"] == roundtrip_openc2["count"]
         assert len(direct_openc2["actuators"]) == len(roundtrip_openc2["actuators"])
 
-        for direct, roundtrip in zip(direct_openc2["actuators"], roundtrip_openc2["actuators"]):
+        for direct, roundtrip in zip(
+            direct_openc2["actuators"], roundtrip_openc2["actuators"]
+        ):
             assert direct["actuator_id"] == roundtrip["actuator_id"]
             assert direct["capability"] == roundtrip["capability"]
             assert direct["actions"] == roundtrip["actions"]
             assert direct["targets"] == roundtrip["targets"]
-

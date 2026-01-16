@@ -7,12 +7,23 @@ Unified tooling for the **System Capability Protocol** (SCP). This monorepo cont
 ## Packages
 
 ### [constructor](./packages/constructor)
+
 **Core tool for architecture definition and graph building**
 
-Scan repositories for `scp.yaml` manifests, validate them, build dependency graphs, and export to various formats (JSON, Mermaid, Neo4j).
+Scan repositories for `scp.yaml` manifests, validate them, build dependency graphs, and export to various formats (JSON, Mermaid, Neo4j, OpenC2).
 
 ```bash
 uv run scp-cli scan ./repos --export mermaid
+```
+
+### [servicenow](./packages/vendor/servicenow)
+
+**ServiceNow CMDB integration**
+
+Sync SCP architecture graphs to ServiceNow Configuration Management Database (CMDB).
+
+```bash
+scp-servicenow cmdb sync graph.json
 ```
 
 ## Quick Start
@@ -34,26 +45,14 @@ Run `make help` to see all available commands
 
 ## Architecture
 
-```
-SCP Ecosystem
-│
-├── scp-definition (separate repo)
-│   └── Specification, schemas, examples
-│
-└── scp-integrations (this monorepo)
-    │
-    ├── constructor (scan → validate → graph)
-    │   ├── Local scanner
-    │   ├── GitHub scanner
-    │   ├── Validator
-    │   └── Exporters (JSON, Mermaid, Neo4j)
-```
+**Built on [scp-sdk](https://github.com/krackenservices/scp-sdk) 0.2.0** - All packages use the SDK for manifest parsing, validation, and graph operations.
 
 ## What is SCP?
 
-The **System Capability Protocol** provides a declarative manifest format (`scp.yaml`) that describes what a system *should* be, complementing OpenTelemetry's view of what *is happening*.
+The **System Capability Protocol** provides a declarative manifest format (`scp.yaml`) that describes what a system _should_ be, complementing OpenTelemetry's view of what _is happening_.
 
 This enables:
+
 - **LLM Reasoning**: Change impact analysis and migration planning
 - **Architecture Discovery**: Auto-generate org-wide system maps
 - **Theory vs Reality**: Diff declared dependencies against OTel traces
@@ -75,4 +74,3 @@ uv run pytest
 ## License
 
 MIT
-

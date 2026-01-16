@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from scp_constructor.models import (
+from scp_sdk import (
     SCPManifest,
     System,
     Classification,
@@ -144,7 +144,7 @@ class TestSCPManifest:
 
     def test_otel_service_name_property(self):
         """Test the otel_service_name convenience property."""
-        from scp_constructor.models import Runtime, Environment
+        from scp_sdk import Runtime, Environment
 
         manifest = SCPManifest(
             scp="0.1.0",
