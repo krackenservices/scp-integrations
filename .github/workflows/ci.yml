@@ -126,8 +126,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}},prefix=constructor-v
-            type=semver,pattern={{major}}.{{minor}},prefix=constructor-v
+            type=match,pattern=constructor-v(.*),group=1
+            type=match,pattern=constructor-v(\d+\.\d+),group=1
 
       - name: Build and push
         uses: docker/build-push-action@v5
