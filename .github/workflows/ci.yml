@@ -136,7 +136,7 @@ jobs:
 
   constructor-publish:
     name: Publish
-    needs: build-test
+    needs: constructor-build-test
     if: startsWith(github.ref, 'refs/tags/constructor-v')
     runs-on: ubuntu-latest
     environment: pypi
@@ -226,7 +226,7 @@ jobs:
 
   servicenow-publish:
     name: Publish
-    needs: build-test
+    needs: servicenow-build-test
     if: startsWith(github.ref, 'refs/tags/servicenow-v')
     runs-on: ubuntu-latest
     environment: pypi
