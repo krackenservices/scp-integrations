@@ -1,5 +1,6 @@
 """Neo4j graph builder for SCP architecture data."""
 
+import json
 from dataclasses import dataclass
 
 from neo4j import GraphDatabase
@@ -94,6 +95,7 @@ class Neo4jGraph:
                     s.domain = $domain,
                     s.otel_service_name = $otel_service_name,
                     s.source = $source,
+                    s._raw_manifest = $raw_manifest,
                     s.created_at = datetime(),
                     s.updated_at = datetime()
                 ON MATCH SET
@@ -104,6 +106,7 @@ class Neo4jGraph:
                     s.domain = $domain,
                     s.otel_service_name = $otel_service_name,
                     s.source = $source,
+                    s._raw_manifest = $raw_manifest,
                     s.updated_at = datetime()
                 RETURN s.urn AS urn,
                        CASE WHEN s.created_at = s.updated_at THEN 'created' ELSE 'updated' END AS action
@@ -121,6 +124,7 @@ class Neo4jGraph:
                     else None,
                     "otel_service_name": manifest.otel_service_name,
                     "source": source,
+                    "raw_manifest": manifest.model_dump_json(),
                 },
             )
 
@@ -288,3 +292,33 @@ class Neo4jGraph:
                 {"urn": system_urn, "depth": depth},
             )
             return [dict(record) for record in result]
+
+    def export_manifests(self) -> list[SCPManifest]:
+        """Export all systems from Neo4j as SCPManifest objects.
+
+        Reconstructs manifests from the stored _raw_manifest JSON field,
+        providing perfect fidelity with the original synced manifests.
+
+        Returns:
+            List of reconstructed SCPManifest objects
+        """
+        manifests: list[SCPManifest] = []
+
+        with self.driver.session(database=self.database) as session:
+            # Get all systems with raw manifest data
+            result = session.run("""
+                MATCH (s:System)
+                WHERE s._raw_manifest IS NOT NULL
+                RETURN s._raw_manifest AS raw_manifest
+                ORDER BY s.tier, s.name
+            """)
+
+            for record in result:
+                raw_json = record["raw_manifest"]
+                if raw_json:
+                    manifest = SCPManifest.model_validate_json(raw_json)
+                    manifests.append(manifest)
+
+        return manifests
+
+

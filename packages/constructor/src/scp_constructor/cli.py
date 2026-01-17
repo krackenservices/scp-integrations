@@ -387,6 +387,67 @@ def transform(
     )
 
 
+@app.command("export-neo4j")
+def export_neo4j(
+    export_format: str = typer.Option(
+        ..., "--export", "-e", help="Export format: json, mermaid, openc2, c4"
+    ),
+    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output file"),
+    stdout: bool = typer.Option(
+        False, "--stdout", help="Output to stdout instead of file"
+    ),
+    neo4j_uri: Optional[str] = typer.Option(
+        None,
+        "--neo4j-uri",
+        envvar="NEO4J_URI",
+        help="Neo4j URI (e.g., bolt://localhost:7687)",
+    ),
+    neo4j_user: Optional[str] = typer.Option(
+        None, "--neo4j-user", envvar="NEO4J_USER", help="Neo4j username"
+    ),
+    neo4j_password: Optional[str] = typer.Option(
+        None, "--neo4j-password", envvar="NEO4J_PASSWORD", help="Neo4j password"
+    ),
+):
+    """Export architecture from Neo4j to other formats.
+
+    Use this when you have previously synced SCP files to Neo4j and want to
+    export the graph to JSON, Mermaid, C4, or other formats without re-scanning.
+    """
+    if not neo4j_uri:
+        console.print(
+            "[red]Error:[/] --neo4j-uri required (or set NEO4J_URI env var)"
+        )
+        raise typer.Exit(1)
+
+    user = neo4j_user or "neo4j"
+    password = neo4j_password or "neo4j"
+
+    console.print(f"[bold blue]Connecting to Neo4j[/] {neo4j_uri}")
+
+    try:
+        with Neo4jGraph(neo4j_uri, user, password) as graph:
+            manifests = graph.export_manifests()
+            console.print(f"Loaded [green]{len(manifests)}[/] systems from Neo4j")
+
+            if not manifests:
+                console.print("[yellow]No systems found in graph[/]")
+                raise typer.Exit(0)
+
+            # Create manifests list in expected format for _export_manifests
+            manifests_with_source = [(m, "neo4j-export") for m in manifests]
+
+            _export_manifests(
+                manifests_with_source,
+                export_format,
+                output,
+                stdout,
+            )
+    except Exception as e:
+        console.print(f"[red]Neo4j Error:[/] {e}")
+        raise typer.Exit(1)
+
+
 @app.command()
 def version():
     """Show version information."""
@@ -395,3 +456,4 @@ def version():
 
 if __name__ == "__main__":
     app()
+

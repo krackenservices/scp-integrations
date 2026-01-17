@@ -63,6 +63,16 @@ export NEO4J_PASSWORD=password
 uv run scp-cli scan ./repos --export neo4j
 ```
 
+### Export from Neo4j
+
+```bash
+# Export from Neo4j to JSON
+uv run scp-cli export-neo4j --export json -o graph.json
+
+# Export from Neo4j to C4 diagram
+uv run scp-cli export-neo4j --export c4 -o architecture.puml
+```
+
 ## Commands
 
 | Command | Description |
@@ -71,6 +81,7 @@ uv run scp-cli scan ./repos --export neo4j
 | `scp-cli scan <path>` | Scan local directory |
 | `scp-cli scan-github <org>` | Scan GitHub org |
 | `scp-cli transform <json>` | Transform JSON to other formats |
+| `scp-cli export-neo4j` | Export from Neo4j to other formats |
 | `scp-cli version` | Show version |
 
 ## Export Formats
