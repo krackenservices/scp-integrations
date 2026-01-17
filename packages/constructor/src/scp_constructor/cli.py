@@ -19,7 +19,7 @@ from . import __version__
 from .scanner.local import scan_directory
 from .scanner.github import scan_github_org
 from .neo4j_sync import Neo4jGraph
-from .export import export_json, export_mermaid, export_openc2, import_json
+from .exporters import export_c4, export_json, export_mermaid, export_openc2, import_json
 
 app = typer.Typer(
     name="scp",
@@ -123,9 +123,12 @@ def _export_manifests(
         data = export_openc2(manifest_list)
         content = json.dumps(data, indent=2)
         default_ext = "json"
+    elif export_format == "c4":
+        content = export_c4(manifest_list)
+        default_ext = "puml"
     else:
         console.print(
-            f"[red]Unknown export format:[/] {export_format}. Use: json, mermaid, openc2, neo4j"
+            f"[red]Unknown export format:[/] {export_format}. Use: json, mermaid, openc2, c4, neo4j"
         )
         raise typer.Exit(1)
 
@@ -144,7 +147,7 @@ def _export_manifests(
 def scan(
     path: Path = typer.Argument(..., help="Directory to scan for scp.yaml files"),
     export_format: Optional[str] = typer.Option(
-        None, "--export", "-e", help="Export format: json, mermaid, openc2, neo4j"
+        None, "--export", "-e", help="Export format: json, mermaid, openc2, c4, neo4j"
     ),
     output: Optional[Path] = typer.Option(
         None, "--output", "-o", help="Output file (default: scp.json or scp.mmd)"
@@ -220,7 +223,7 @@ def scan_github(
         None, "--token", envvar="GITHUB_TOKEN", help="GitHub personal access token"
     ),
     export_format: Optional[str] = typer.Option(
-        None, "--export", "-e", help="Export format: json, mermaid, openc2, neo4j"
+        None, "--export", "-e", help="Export format: json, mermaid, openc2, c4, neo4j"
     ),
     output: Optional[Path] = typer.Option(
         None, "--output", "-o", help="Output file (default: scp.json or scp.mmd)"
@@ -330,7 +333,7 @@ def validate(
 def transform(
     input_file: Path = typer.Argument(..., help="JSON file from 'scp-cli scan' output"),
     export_format: str = typer.Option(
-        ..., "--export", "-e", help="Export format: mermaid, openc2, neo4j"
+        ..., "--export", "-e", help="Export format: mermaid, openc2, c4, neo4j"
     ),
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output file"),
     stdout: bool = typer.Option(

@@ -27,6 +27,9 @@ uv run scp-cli scan ./path/to/repos --export json -o graph.json
 
 # Scan and export OpenC2 actuator profile (for SOAR)
 uv run scp-cli scan ./path/to/repos --export openc2 -o actuators.json
+
+# Scan and export C4 PlantUML diagram
+uv run scp-cli scan ./path/to/repos --export c4 -o architecture.puml
 ```
 
 ### Transform JSON to Other Formats
@@ -36,6 +39,7 @@ uv run scp-cli scan ./path/to/repos --export openc2 -o actuators.json
 uv run scp-cli scan ./repos --export json -o graph.json
 uv run scp-cli transform graph.json --export mermaid -o diagram.mmd
 uv run scp-cli transform graph.json --export openc2 -o actuators.json
+uv run scp-cli transform graph.json --export c4 -o architecture.puml
 ```
 
 ### Scan GitHub Organization
@@ -73,6 +77,7 @@ uv run scp-cli scan ./repos --export neo4j
 
 - **JSON**: Graph with nodes/edges arrays
 - **Mermaid**: Flowchart diagram with tier styling
+- **C4**: PlantUML C4 Container diagram with domain boundaries
 - **OpenC2**: Actuator profile for SOAR integration
 - **Neo4j**: Direct sync to Neo4j graph database
 
