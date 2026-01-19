@@ -4,6 +4,29 @@ version = "0.3.0"
 description = "Build architecture models from scp.yaml files"
 readme = "README.md"
 requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Kracken Services", email = "scp@krackenservices.com"}
+]
+keywords = ["scp", "architecture", "dependency-graph", "neo4j", "cli"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Environment :: Console",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/krackenservices/scp-integrations"
+Documentation = "https://systemcapabilityprotocol.com/"
+Repository = "https://github.com/krackenservices/scp-integrations.git"
+Issues = "https://github.com/krackenservices/scp-integrations/issues"
 dependencies = [
     "scp-sdk>=0.2.0",
     "typer>=0.9",

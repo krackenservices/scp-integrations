@@ -4,6 +4,30 @@ version = "0.1.0"
 description = "ServiceNow CMDB integration for SCP unified model"
 readme = "README.md"
 requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Kracken Services", email = "scp@krackenservices.com"}
+]
+keywords = ["scp", "servicenow", "cmdb", "integration", "itsm"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Environment :: Console",
+    "Topic :: System :: Systems Administration",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/krackenservices/scp-integrations"
+Documentation = "https://systemcapabilityprotocol.com/"
+Repository = "https://github.com/krackenservices/scp-integrations.git"
+Issues = "https://github.com/krackenservices/scp-integrations/issues"
 dependencies = [
     "pydantic>=2.0",
     "httpx>=0.25",
