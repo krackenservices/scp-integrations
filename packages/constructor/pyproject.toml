@@ -22,11 +22,6 @@ classifiers = [
     "Typing :: Typed",
 ]
 
-[project.urls]
-Homepage = "https://github.com/krackenservices/scp-integrations"
-Documentation = "https://systemcapabilityprotocol.com/"
-Repository = "https://github.com/krackenservices/scp-integrations.git"
-Issues = "https://github.com/krackenservices/scp-integrations/issues"
 dependencies = [
     "scp-sdk>=0.2.0",
     "typer>=0.9",
@@ -37,6 +32,12 @@ dependencies = [
 
 [project.scripts]
 scp-cli = "scp_constructor.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/krackenservices/scp-integrations"
+Documentation = "https://systemcapabilityprotocol.com/"
+Repository = "https://github.com/krackenservices/scp-integrations.git"
+Issues = "https://github.com/krackenservices/scp-integrations/issues"
 
 [build-system]
 requires = ["hatchling"]

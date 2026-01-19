@@ -23,11 +23,6 @@ classifiers = [
     "Typing :: Typed",
 ]
 
-[project.urls]
-Homepage = "https://github.com/krackenservices/scp-integrations"
-Documentation = "https://systemcapabilityprotocol.com/"
-Repository = "https://github.com/krackenservices/scp-integrations.git"
-Issues = "https://github.com/krackenservices/scp-integrations/issues"
 dependencies = [
     "pydantic>=2.0",
     "httpx>=0.25",
@@ -39,6 +34,12 @@ dependencies = [
 
 [project.scripts]
 scp-servicenow = "scp_servicenow.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/krackenservices/scp-integrations"
+Documentation = "https://systemcapabilityprotocol.com/"
+Repository = "https://github.com/krackenservices/scp-integrations.git"
+Issues = "https://github.com/krackenservices/scp-integrations/issues"
 
 [build-system]
 requires = ["hatchling"]
