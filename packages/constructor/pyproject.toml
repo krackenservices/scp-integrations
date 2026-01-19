@@ -34,8 +34,8 @@ dependencies = [
 scp-cli = "scp_constructor.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/krackenservices/scp-integrations"
-Documentation = "https://systemcapabilityprotocol.com/"
+Homepage = "https://systemcapabilityprotocol.com/"
+Documentation = "https://systemcapabilityprotocol.com/integrations"
 Repository = "https://github.com/krackenservices/scp-integrations.git"
 Issues = "https://github.com/krackenservices/scp-integrations/issues"
 
