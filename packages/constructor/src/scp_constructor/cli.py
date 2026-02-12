@@ -19,7 +19,13 @@ from . import __version__
 from .scanner.local import scan_directory
 from .scanner.github import scan_github_org
 from .neo4j_sync import Neo4jGraph
-from .exporters import export_c4, export_json, export_mermaid, export_openc2, import_json
+from .exporters import (
+    export_c4,
+    export_json,
+    export_mermaid,
+    export_openc2,
+    import_json,
+)
 
 app = typer.Typer(
     name="scp",
@@ -289,6 +295,9 @@ def scan_github(
 @app.command()
 def validate(
     path: Path = typer.Argument(..., help="Path to scp.yaml file or directory"),
+    strict: bool = typer.Option(
+        False, "--strict", help="Disallow even x- extension fields"
+    ),
 ):
     """Validate SCP files without syncing to a graph."""
 
@@ -305,22 +314,36 @@ def validate(
 
     for scp_file in files:
         try:
-            manifest = load_scp(scp_file)
+            manifest = Manifest.from_file(scp_file)
+            result = manifest.validate(strict=strict)
+
+            if not result:
+                errors += 1
+                console.print(f"✗ [red]{scp_file}[/]")
+                console.print("  Error: Validation failed")
+                for err in result.errors:
+                    console.print(f"    - {err}")
+                continue
+
             console.print(f"✓ [green]{scp_file}[/]")
-            console.print(f"  System: {manifest.system.name} ({manifest.system.urn})")
+            console.print(f"  System: {manifest.name} ({manifest.urn})")
 
-            if manifest.depends:
-                console.print(f"  Dependencies: {len(manifest.depends)}")
-            if manifest.provides:
-                console.print(f"  Capabilities: {len(manifest.provides)}")
+            if manifest.dependencies:
+                console.print(f"  Dependencies: {len(manifest.dependencies)}")
+            if manifest.capabilities:
+                console.print(f"  Capabilities: {len(manifest.capabilities)}")
 
-        except SCPParseError as e:
+        except Exception as e:
             errors += 1
             console.print(f"✗ [red]{scp_file}[/]")
-            console.print(f"  Error: {e}")
-            for err in e.errors[:5]:  # Show first 5 errors
-                loc = ".".join(str(part) for part in err.get("loc", []))
-                console.print(f"    - {loc}: {err.get('msg', 'Unknown error')}")
+            if hasattr(e, "errors") and callable(e.errors):
+                console.print("  Error: Parse error")
+                msg = str(e)
+                # Pydantic errors can be verbose, try to extract relevant parts if possible
+                # or just print the message
+                console.print(f"  {msg}")
+            else:
+                console.print(f"  Error: {e}")
 
     if errors:
         console.print(f"\n[red]{errors} file(s) failed validation[/]")
