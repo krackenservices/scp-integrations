@@ -11,7 +11,8 @@ from scp_sdk import (
     Dependency,
     SecurityExtension,
 )
-from scp_constructor.export import (
+from scp_constructor.exporters import (
+    export_c4,
     export_json,
     export_mermaid,
     export_openc2,
@@ -317,3 +318,70 @@ class TestImportJson:
             assert direct["capability"] == roundtrip["capability"]
             assert direct["actions"] == roundtrip["actions"]
             assert direct["targets"] == roundtrip["targets"]
+
+
+class TestExportC4:
+    """Tests for C4 PlantUML export."""
+
+    def test_export_header(self, sample_manifests):
+        """Test C4 output has correct PlantUML header."""
+        result = export_c4(sample_manifests)
+
+        assert "@startuml" in result
+        assert "@enduml" in result
+        assert "!include" in result
+        assert "C4_Container.puml" in result
+
+    def test_export_title(self, sample_manifests):
+        """Test custom title."""
+        result = export_c4(sample_manifests, title="My Architecture")
+
+        assert "title My Architecture" in result
+
+    def test_export_systems_as_containers(self, sample_manifests):
+        """Test systems are exported as Container elements."""
+        result = export_c4(sample_manifests)
+
+        assert "Container(" in result
+        assert "Order Service" in result
+        assert "User Service" in result
+
+    def test_export_relationships(self, sample_manifests):
+        """Test dependencies are exported as Rel elements."""
+        result = export_c4(sample_manifests)
+
+        assert "Rel(" in result
+        assert "user-lookup" in result  # capability name in relationship
+
+    def test_export_domain_boundaries(self, sample_manifests):
+        """Test systems are grouped by domain."""
+        result = export_c4(sample_manifests)
+
+        # Both systems have domains defined
+        assert "System_Boundary(" in result
+        assert "ordering" in result.lower()
+        assert "identity" in result.lower()
+
+    def test_export_external_systems(self):
+        """Test external dependencies are exported as System_Ext."""
+        manifest = SCPManifest(
+            scp="0.1.0",
+            system=System(
+                urn="urn:scp:test:payment-service",
+                name="Payment Service",
+                classification=Classification(tier=1, domain="payments"),
+            ),
+            depends=[
+                Dependency(
+                    system="urn:scp:stripe:api",
+                    capability="charge",
+                    type="rest",
+                    criticality="required",
+                ),
+            ],
+        )
+        result = export_c4([manifest])
+
+        # External system (not scanned) should be System_Ext
+        assert "System_Ext(" in result
+        assert "Api" in result  # derived name from URN
