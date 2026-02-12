@@ -1,6 +1,5 @@
 """Neo4j graph builder for SCP architecture data."""
 
-import json
 from dataclasses import dataclass
 
 from neo4j import GraphDatabase
@@ -320,5 +319,3 @@ class Neo4jGraph:
                     manifests.append(manifest)
 
         return manifests
-
-
